@@ -17,6 +17,9 @@ importers:
       longport:
         specifier: ^3.0.23
         version: 3.0.23
+      longport-linux-x64-gnu:
+        specifier: 3.0.23
+        version: 3.0.23
       next:
         specifier: ^15.3.0
         version: 15.5.14(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -26,10 +29,6 @@ importers:
       react-dom:
         specifier: ^19.1.0
         version: 19.2.4(react@19.2.4)
-    optionalDependencies:
-      longport-linux-x64-gnu:
-        specifier: 3.0.23
-        version: 3.0.23
     devDependencies:
       '@types/node':
         specifier: ^22.15.3
@@ -467,7 +466,6 @@ packages:
   longport-linux-x64-gnu@3.0.23:
     resolution: {integrity: sha512-aGcv29C5AnoWZeOAbPIf4ZLp3Vb74fXCsqWErzfDQ4uJcYBLoiKoMW1DhWKHyOQmF4HWqRtNdspLkcSW8ukJFw==, tarball: https://registry.npmjs.org/longport-linux-x64-gnu/-/longport-linux-x64-gnu-3.0.23.tgz}
     engines: {node: '>= 10'}
-    cpu: [x64]
     os: [linux]
 
   longport-win32-x64-msvc@3.0.23:
@@ -854,8 +852,7 @@ snapshots:
   longport-linux-arm64-gnu@3.0.23:
     optional: true
 
-  longport-linux-x64-gnu@3.0.23:
-    optional: true
+  longport-linux-x64-gnu@3.0.23: {}
 
   longport-win32-x64-msvc@3.0.23:
     optional: true

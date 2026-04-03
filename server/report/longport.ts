@@ -1,9 +1,7 @@
-import {
-  Config,
-  NaiveDate,
-  QuoteContext,
-} from "longport";
 import type { SecuritySearchResult } from "@/server/report/types";
+
+type LongportModule = typeof import("longport");
+type QuoteContext = Awaited<ReturnType<LongportModule["QuoteContext"]["new"]>>;
 
 const NO_ADJUST = 0;
 const DAY_PERIOD = 14;
@@ -11,13 +9,25 @@ const INTRADAY_SESSION = 0;
 const US_MARKET = 1;
 const OVERNIGHT_CATEGORY = 0;
 
+let longportModulePromise: Promise<LongportModule> | null = null;
 let quoteContextPromise: Promise<QuoteContext> | null = null;
 let usSecuritiesPromise: Promise<SecuritySearchResult[]> | null = null;
 
+async function getLongportModule() {
+  if (!longportModulePromise) {
+    longportModulePromise = import("longport");
+  }
+
+  return longportModulePromise;
+}
+
 export async function getQuoteContext() {
   if (!quoteContextPromise) {
-    const config = Config.fromEnv();
-    quoteContextPromise = QuoteContext.new(config);
+    quoteContextPromise = (async () => {
+      const { Config, QuoteContext } = await getLongportModule();
+      const config = Config.fromEnv();
+      return QuoteContext.new(config);
+    })();
   }
 
   return quoteContextPromise;
@@ -37,22 +47,6 @@ export async function getDailyCandles(symbol: string, count: number) {
 export async function getQuotes(symbols: string[]) {
   const ctx = await getQuoteContext();
   return ctx.quote(symbols);
-}
-
-export async function getOptionExpiryDates(symbol: string) {
-  const ctx = await getQuoteContext();
-  return ctx.optionChainExpiryDateList(symbol);
-}
-
-export async function getOptionChainByDate(symbol: string, expiryDate: unknown) {
-  const ctx = await getQuoteContext();
-  const [year, month, day] = String(expiryDate).split("-").map(Number);
-  return ctx.optionChainInfoByDate(symbol, new NaiveDate(year, month, day));
-}
-
-export async function getOptionQuotes(symbols: string[]) {
-  const ctx = await getQuoteContext();
-  return ctx.optionQuote(symbols);
 }
 
 export async function getUSSecurities() {

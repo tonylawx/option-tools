@@ -15,12 +15,10 @@
     "@hono/node-server": "^1.14.4",
     "hono": "^4.8.3",
     "longport": "^3.0.23",
+    "longport-linux-x64-gnu": "3.0.23",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
-  },
-  "optionalDependencies": {
-    "longport-linux-x64-gnu": "3.0.23"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
