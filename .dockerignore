@@ -1,0 +1,14 @@
+.git
+.gitignore
+.idea
+.next
+node_modules
+npm-debug.log
+pnpm-debug.log
+tsconfig.tsbuildinfo
+.env
+.env.*
+!.env.example
+app
+components
+Downloads

@@ -1,40 +1,40 @@
-import { getRequestListener } from "@hono/node-server";
+import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import next from "next";
-import { createServer } from "node:http";
-import { parse } from "node:url";
+import { cors } from "hono/cors";
 import { reportRoute } from "@/server/routes/report";
+import { searchRoute } from "@/server/routes/search";
 
-const port = Number(process.env.PORT ?? 3000);
-const dev = process.env.NODE_ENV !== "production";
+const port = Number(
+  process.env.API_PORT ??
+    (process.env.NODE_ENV === "production" ? process.env.PORT : undefined) ??
+    3001
+);
 
 async function bootstrap() {
-  const app = next({
-    dev,
-    dir: process.cwd(),
-    hostname: "0.0.0.0",
-    port
-  });
-  const handle = app.getRequestHandler();
-
-  await app.prepare();
-
   const hono = new Hono();
-  const honoListener = getRequestListener(hono.fetch);
+
+  hono.use(
+    "*",
+    cors({
+      origin: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      allowMethods: ["GET", "OPTIONS"],
+      allowHeaders: ["Content-Type", "Authorization"]
+    })
+  );
 
   hono.get("/api/report", reportRoute);
+  hono.get("/api/search", searchRoute);
+  hono.get("/health", (c) => c.json({ ok: true }));
 
-  createServer((req, res) => {
-    if (req.url?.startsWith("/api/")) {
-      void honoListener(req, res);
-      return;
+  serve(
+    {
+      fetch: hono.fetch,
+      port
+    },
+    (info) => {
+      console.log(`> Hono API ready on http://localhost:${info.port}`);
     }
-
-    const parsedUrl = parse(req.url ?? "/", true);
-    void handle(req, res, parsedUrl);
-  }).listen(port, "0.0.0.0", () => {
-    console.log(`> Ready on http://localhost:${port}`);
-  });
+  );
 }
 
 bootstrap().catch((error) => {

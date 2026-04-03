@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: option-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: LONGPORT_APP_KEY
+        sync: false
+      - key: LONGPORT_APP_SECRET
+        sync: false
+      - key: LONGPORT_ACCESS_TOKEN
+        sync: false
+      - key: LONGPORT_LANGUAGE
+        value: zh-CN

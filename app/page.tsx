@@ -12,6 +12,10 @@ function displaySymbol(symbol: string) {
   return symbol.replace(/\.US$/, "");
 }
 
+function getApiBaseUrl() {
+  return process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:3001";
+}
+
 export default function Page() {
   const [report, setReport] = useState<SellPutReport | null>(null);
   const [selectedSymbol, setSelectedSymbol] = useState(DEFAULT_SYMBOL);
@@ -67,7 +71,7 @@ export default function Page() {
       setReportError("");
 
       try {
-        const response = await fetch(`/api/report?symbol=${encodeURIComponent(symbol)}`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/report?symbol=${encodeURIComponent(symbol)}`, {
           cache: "no-store"
         });
 
@@ -109,7 +113,7 @@ export default function Page() {
       setSearchError("");
 
       try {
-        const response = await fetch("/api/search", {
+        const response = await fetch(`${getApiBaseUrl()}/api/search`, {
           cache: "no-store"
         });
 
