@@ -16,7 +16,7 @@ async function bootstrap() {
   hono.use(
     "*",
     cors({
-      origin: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      origin: (origin) => origin ?? "*",
       allowMethods: ["GET", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"]
     })

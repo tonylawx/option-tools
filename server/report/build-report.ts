@@ -1,5 +1,4 @@
-import { getFallbackReport } from "@/server/report/fallback";
-import { getCboeSeries, getLatestCboeClose } from "@/server/report/cboe";
+import { getLatestCboeClose } from "@/server/report/cboe";
 import { getNextMacroEvent } from "@/server/report/macro-calendar";
 import {
   getDailyCandles,
@@ -94,14 +93,6 @@ function formatMarketDate(date: Date) {
   return `${year}-${month}-${day} ${weekday}`;
 }
 
-function formatGeneratedAt(date: Date) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    dateStyle: "long",
-    timeStyle: "short",
-    timeZone: "America/New_York"
-  }).format(date);
-}
-
 function buildStarLine(stars: number) {
   return `${"★".repeat(stars)}${"☆".repeat(5 - stars)}`;
 }
@@ -163,10 +154,10 @@ function buildVci(
     vci,
     conclusion,
     items: [
-      { label: "IVR", value: ivr.toFixed(1), progress: ivrProgress, weight: 0.36 },
-      { label: "VIX", value: vix.toFixed(1), progress: vixProgress, weight: 0.39 },
-      { label: "VVIX", value: vvix.toFixed(1), progress: vvixProgress, weight: 0.17 },
-      { label: "TS", value: termStructure.toFixed(1), progress: tsProgress, weight: 0.08 }
+      { label: "IVR", value: ivr.toFixed(1), progress: ivrProgress },
+      { label: "VIX", value: vix.toFixed(1), progress: vixProgress },
+      { label: "VVIX", value: vvix.toFixed(1), progress: vvixProgress },
+      { label: "TS", value: termStructure.toFixed(1), progress: tsProgress }
     ]
   };
 }
@@ -179,7 +170,6 @@ function scoreFromDistance(distance: number) {
 }
 
 export async function buildSellPutReport(symbol: string): Promise<SellPutReport> {
-  const fallback = getFallbackReport(symbol);
   const [quotes, symbolCandles, vixQuotes, vixCandles, vvixLatest, vix3mLatest] = await Promise.all([
     getQuotes([symbol]),
     getDailyCandles(symbol, 140),
@@ -231,8 +221,7 @@ export async function buildSellPutReport(symbol: string): Promise<SellPutReport>
     return {
       label: `${days}d`,
       low,
-      distancePercent: pctDistance(underlyingLast, low),
-      fibReference
+      distancePercent: pctDistance(underlyingLast, low)
     };
   });
 
@@ -257,26 +246,19 @@ export async function buildSellPutReport(symbol: string): Promise<SellPutReport>
   const starScore = starScoreFromTotal(total);
 
   return {
-    ...fallback,
-    generatedAtLabel: formatGeneratedAt(marketTimestamp),
+    symbol,
     header: {
-      ...fallback.header,
-      title: `${symbol} 卖出看跌期权 每日报告`,
+      kicker: "本策略仅作为期权量化思路，不作为投资建议。",
       dateLine: formatMarketDate(marketTimestamp),
       starLine: buildStarLine(starScore)
     },
     summary: {
-      ...fallback.summary,
-      actionLabel: actionLabelFromStars(starScore),
-      scope: `下面示例以 ${symbol} 作为重点研究对象。`
+      actionLabel: actionLabelFromStars(starScore)
     },
     score: {
-      total,
       starScore,
       vci: vciBlock.vci,
-      trend: trendScore,
-      support: supportScore,
-      event: macro.score
+      trend: trendScore
     },
     vciItems: vciBlock.items,
     vciConclusion: `${vciBlock.vci.toFixed(3)} ${vciBlock.conclusion}`,
@@ -303,32 +285,6 @@ export async function buildSellPutReport(symbol: string): Promise<SellPutReport>
       dateLabel: macro.date.slice(5).replace("-", "/"),
       countdownLabel: `${macro.days} days`,
       severity: macro.severity
-    },
-    snapshotRows: [
-      {
-        dimension: "VCI",
-        rawValue: vciBlock.vci.toFixed(3),
-        score: `${(vciBlock.vci * 40).toFixed(1)} / 40`,
-        status: `IVR ${vciBlock.items[0].value}，VIX ${vciBlock.items[1].value}，TS ${vciBlock.items[3].value}`
-      },
-      {
-        dimension: "趋势",
-        rawValue: `${symbol} ${distanceToMa120 >= 0 ? "高于" : "低于"} MA120 ${Math.abs(distanceToMa120).toFixed(2)}%`,
-        score: `${trendScore.toFixed(1)} / 20`,
-        status: trendLabel
-      },
-      {
-        dimension: "支撑位",
-        rawValue: `距支撑 ${supportDistance.toFixed(1)}%`,
-        score: `${supportScore.toFixed(1)} / 20`,
-        status: `关键支撑 $${keySupport.toFixed(2)}`
-      },
-      {
-        dimension: "宏观",
-        rawValue: `${macro.name} ${macro.days} 天后`,
-        score: `${macro.score} / 20`,
-        status: macro.severity
-      }
-    ]
+    }
   };
 }
