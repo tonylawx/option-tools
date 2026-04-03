@@ -144,16 +144,16 @@ export function translateVciConclusion(label: string, locale: Locale) {
 export function getVciHint(label: string, locale: Locale) {
   const copy = {
     zh: {
-      IVR: "当前 VIX 位于过去 252 个交易日区间的百分位",
-      VIX: "15-25 区间更友好，过高通常意味着系统性风险上升",
-      VVIX: "衡量波动率本身的波动，越低通常越稳定",
-      TS: "观察 VIX3M 与 VIX 差值，正值代表正常 contango"
+      IVR: "隐含波动率排名：当前 VIX 在 52 周的百分位。越高 = 权利金越丰厚",
+      VIX: "恐慌指数(取反)：VIX 越低(>15) = 市场越平静 = 越适合卖 Put",
+      VVIX: "VIX 的波动率：越低 = 波动率环境越稳定 = 卖期权越安全",
+      TS: "期限结构：VIX3M 减 VIX。正值(正向结构) = 正常市场 = 对卖方有利"
     },
     en: {
-      IVR: "Percentile of current VIX within the last 252 trading days",
-      VIX: "The 15-25 zone is usually friendlier; very high VIX signals stress",
-      VVIX: "Measures volatility of volatility; lower usually means more stability",
-      TS: "Tracks VIX3M minus VIX; positive values imply normal contango"
+      IVR: "Implied vol rank: current VIX percentile within the past 52 weeks. Higher = richer premium",
+      VIX: "Fear index (inverse): lower VIX, while still above 15, means calmer markets and a better short-put setup",
+      VVIX: "Volatility of VIX: lower = a steadier vol regime = safer for option sellers",
+      TS: "Term structure: VIX3M minus VIX. Positive values (contango) imply a normal market and favor sellers"
     }
   } as const;
 
