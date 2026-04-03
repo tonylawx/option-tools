@@ -7,13 +7,22 @@ import type { SecuritySearchResult, SellPutReport } from "@/server/report/types"
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SYMBOL = "QQQ.US";
+const PROD_API_BASE_URL = "https://option-tools-4jy4.onrender.com";
 
 function displaySymbol(symbol: string) {
   return symbol.replace(/\.US$/, "");
 }
 
 function getApiBaseUrl() {
-  return process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "http://localhost:3001";
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "");
+  }
+
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return "http://localhost:3001";
+  }
+
+  return PROD_API_BASE_URL;
 }
 
 export default function Page() {
