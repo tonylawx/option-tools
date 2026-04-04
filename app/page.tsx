@@ -186,7 +186,7 @@ export default function Page() {
       } catch {
         if (!cancelled) {
           setSecurities([]);
-          setSearchError("长桥标的池加载失败，请检查本地 LONGPORT_ACCESS_TOKEN 是否有效。");
+          setSearchError("长桥标的池加载失败，请检查本地 LONGBRIDGE_ACCESS_TOKEN 是否有效。");
         }
       } finally {
         if (!cancelled) {

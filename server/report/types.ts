@@ -9,6 +9,15 @@ export type SecuritySearchResult = {
   name: string;
 };
 
+export type ImportantEventItem = {
+  label: string;
+  name: string;
+  dateLabel: string;
+  countdownLabel: string;
+  severity: string;
+  impactsScore: boolean;
+};
+
 export type SellPutReport = {
   symbol: string;
   header: {
@@ -54,5 +63,13 @@ export type SellPutReport = {
     dateLabel: string;
     countdownLabel: string;
     severity: string;
+    items: ImportantEventItem[];
+  };
+  earnings: {
+    nextDateLabel: string;
+    countdownLabel: string;
+    severity: string;
+    latestFilingTitle: string;
+    latestFilingDateLabel: string;
   };
 };

@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { searchUSSecurities } from "@/server/report/longport";
+import { searchUSSecurities } from "@/server/report/longbridge";
 
 export async function searchRoute(c: Context) {
   const query = c.req.query("q") ?? "";

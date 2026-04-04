@@ -26,6 +26,7 @@ function percentColor(value: number): string {
 
 export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
   const text = uiCopy[locale];
+  const eventItems = report.event.items ?? [];
 
   return (
     <main style={compact ? styles.compactShell : styles.shell}>
@@ -159,12 +160,37 @@ export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
 
           <div style={styles.eventsCard}>
             <h3 style={styles.cardTitle}>{text.eventTitle}</h3>
-            <div style={styles.eventRow}>
-              <span>{report.event.name}</span>
-              <span>{report.event.dateLabel}</span>
-              <span>{report.event.countdownLabel}</span>
-              <span style={styles.eventPill}>{report.event.severity}</span>
-            </div>
+            <p style={styles.eventHint}>{text.eventHint}</p>
+            {eventItems.length > 0 ? (
+              <div style={styles.eventsList}>
+                {eventItems.map((item) => (
+                  <div key={`${item.label}-${item.name}`} style={styles.eventListRow}>
+                    <div style={styles.eventListMain}>
+                      <strong style={styles.eventListTitle}>{item.name}</strong>
+                      {item.impactsScore ? (
+                        <span style={styles.eventImpact}>{text.eventImpact}</span>
+                      ) : null}
+                    </div>
+                    <div style={styles.eventListSide}>
+                      <span style={{ ...styles.earningsMeta, color: item.impactsScore ? "#c85d68" : "var(--muted)" }}>
+                        {item.dateLabel} · {item.countdownLabel}
+                      </span>
+                      <span
+                        style={{
+                          ...styles.eventPill,
+                          background: item.impactsScore ? "rgba(200, 93, 104, 0.12)" : "var(--soft-blue)",
+                          color: item.impactsScore ? "#c85d68" : "#4f658c"
+                        }}
+                      >
+                        {item.severity}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={styles.eventEmpty}>{text.eventNone}</div>
+            )}
           </div>
         </section>
       </section>
@@ -449,20 +475,100 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 14,
     border: "1px solid rgba(29, 32, 56, 0.07)"
   },
-  eventRow: {
-    marginTop: 10,
+  eventHint: {
+    margin: "6px 0 0",
+    color: "var(--muted)",
+    fontSize: 12,
+    lineHeight: 1.5
+  },
+  eventsList: {
+    marginTop: 12,
     display: "grid",
-    gridTemplateColumns: "1.2fr repeat(3, 1fr)",
+    gap: 10
+  },
+  eventListRow: {
+    display: "flex",
+    justifyContent: "space-between",
     gap: 12,
-    alignItems: "center"
+    alignItems: "center",
+    padding: "12px 0",
+    borderTop: "1px solid rgba(29, 32, 56, 0.06)"
+  },
+  eventListMain: {
+    display: "grid",
+    gap: 4
+  },
+  eventListTitle: {
+    fontSize: 16,
+    lineHeight: 1.25
+  },
+  eventImpact: {
+    color: "#c85d68",
+    fontSize: 12,
+    fontWeight: 700
+  },
+  eventListSide: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+    justifyContent: "flex-end"
+  },
+  eventEmpty: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTop: "1px solid rgba(29, 32, 56, 0.06)",
+    color: "var(--muted)",
+    fontSize: 13
+  },
+  earningsBlock: {
+    display: "grid",
+    gap: 8,
+    padding: 12,
+    borderRadius: 16,
+    background: "rgba(244, 246, 252, 0.85)",
+    border: "1px solid rgba(29, 32, 56, 0.06)"
+  },
+  eventBlockTop: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10
   },
   eventPill: {
-    justifySelf: "start",
     padding: "6px 10px",
     borderRadius: 999,
     background: "var(--soft-blue)",
     color: "#4f658c",
     fontSize: 11
+  },
+  earningsLabel: {
+    color: "#8a7b52",
+    fontSize: 11,
+    fontWeight: 700
+  },
+  earningsTitleText: {
+    fontSize: 18,
+    lineHeight: 1.2
+  },
+  earningsValue: {
+    fontSize: 14,
+    fontWeight: 700
+  },
+  earningsMeta: {
+    color: "var(--muted)",
+    fontSize: 12
+  },
+  inlineMetaRow: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    alignItems: "center"
+  },
+  earningsFootnote: {
+    color: "var(--muted)",
+    fontSize: 12,
+    lineHeight: 1.5
   },
   docSection: {
     marginTop: 38
