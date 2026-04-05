@@ -1,3 +1,6 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
 export type MacroEventKind = "fomc" | "cpi" | "ppi";
 
 export type MacroEvent = {
@@ -19,6 +22,7 @@ const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
 let cache: CachedEvents | null = null;
 let lastGoodEvents: MacroEvent[] | null = null;
+const execFileAsync = promisify(execFile);
 
 const MONTH_INDEX: Record<string, number> = {
   jan: 1,
@@ -155,6 +159,36 @@ function dedupeEvents(events: MacroEvent[]) {
   });
 }
 
+async function fetchText(url: string, label: string) {
+  const response = await fetch(url, {
+    headers: {
+      "user-agent": "option-tools/1.0"
+    },
+    cache: "no-store"
+  });
+
+  if (response.ok) {
+    return response.text();
+  }
+
+  if ("Bun" in globalThis && url.includes("bls.gov")) {
+    const helper = [
+      "const url = process.argv[1];",
+      "const response = await fetch(url, { headers: { 'user-agent': 'option-tools/1.0' }, cache: 'no-store' });",
+      "if (!response.ok) throw new Error(String(response.status));",
+      "process.stdout.write(await response.text());"
+    ].join(" ");
+
+    const { stdout } = await execFileAsync("node", ["--input-type=module", "-e", helper, url], {
+      maxBuffer: 10 * 1024 * 1024
+    });
+
+    return stdout;
+  }
+
+  throw new Error(`Failed to load ${label}: ${response.status}`);
+}
+
 export async function getMacroEvents() {
   const now = Date.now();
   if (cache && cache.expiresAt > now) {
@@ -162,30 +196,10 @@ export async function getMacroEvents() {
   }
 
   try {
-    const [fedResponse, blsResponse] = await Promise.all([
-      fetch(FED_FOMC_URL, {
-        headers: {
-          "user-agent": "option-tools/1.0"
-        },
-        cache: "no-store"
-      }),
-      fetch(BLS_ICS_URL, {
-        headers: {
-          "user-agent": "option-tools/1.0"
-        },
-        cache: "no-store"
-      })
+    const [fedHtml, blsIcs] = await Promise.all([
+      fetchText(FED_FOMC_URL, "FOMC calendar"),
+      fetchText(BLS_ICS_URL, "BLS calendar")
     ]);
-
-    if (!fedResponse.ok) {
-      throw new Error(`Failed to load FOMC calendar: ${fedResponse.status}`);
-    }
-
-    if (!blsResponse.ok) {
-      throw new Error(`Failed to load BLS calendar: ${blsResponse.status}`);
-    }
-
-    const [fedHtml, blsIcs] = await Promise.all([fedResponse.text(), blsResponse.text()]);
     const events = dedupeEvents([...parseFomcEvents(fedHtml), ...parseBlsEvents(blsIcs)]).sort((a, b) =>
       a.date.localeCompare(b.date)
     );

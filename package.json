@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.7.0",
+  "packageManager": "bun@1.3.11",
   "scripts": {
     "dev": "next dev",
-    "api:dev": "node --import tsx server.ts",
+    "api:dev": "\"$npm_execpath\" server.ts",
     "build": "next build",
     "start": "next start",
-    "api:start": "NODE_ENV=production node --import tsx server.ts",
+    "api:start": "NODE_ENV=production \"$npm_execpath\" server.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

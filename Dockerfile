@@ -3,15 +3,14 @@ FROM node:22-trixie-slim
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+ENV BUN_INSTALL="/root/.bun"
+ENV PATH="$BUN_INSTALL/bin:$PATH"
 
-RUN corepack enable
+RUN curl -fsSL https://bun.sh/install | bash
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json bun.lock ./
 
-# Keep tsx available at runtime because the API entrypoint runs directly from TypeScript.
-RUN pnpm install --frozen-lockfile
+RUN bun install --frozen-lockfile
 
 COPY server ./server
 COPY shared ./shared
@@ -21,4 +20,4 @@ COPY next.config.ts ./
 
 EXPOSE 3001
 
-CMD ["pnpm", "run", "api:start"]
+CMD ["bun", "run", "api:start"]

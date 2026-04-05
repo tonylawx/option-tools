@@ -10,7 +10,7 @@ import { Locale, uiCopy } from "@/shared/i18n";
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SYMBOL = "QQQ.US";
-const PROD_API_BASE_URL = "https://option-tools-4jy4.onrender.com";
+const PROD_API_BASE_URL = "https://api.optix.tonylaw.cc";
 type TabKey = "report" | "calculator";
 
 function displaySymbol(symbol: string) {
