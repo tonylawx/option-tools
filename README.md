@@ -77,6 +77,7 @@ Environment variables:
 
 - `AUTH_SECRET`
 - `AUTH_INTERNAL_KEY`
+- `AUTH_SESSION_COOKIE_NAME`
 - `AUTH_APP_URL=https://auth.tonylaw.cc`
 - `AUTH_API_URL=https://api.tonylaw.cc/auth`
 - `NEXT_PUBLIC_AUTH_API_URL=https://api.tonylaw.cc/auth`
@@ -99,6 +100,7 @@ Environment variables:
 
 - `AUTH_SECRET`
 - `AUTH_APP_URL=https://auth.tonylaw.cc`
+- `AUTH_SESSION_COOKIE_NAME`
 - `NEXT_PUBLIC_API_BASE_URL=https://api.tonylaw.cc/optix`
 
 Domain:
@@ -136,6 +138,7 @@ The Blueprint will create:
 - `SERVICE_NAME=api`
 - `AUTH_SECRET`
 - `AUTH_INTERNAL_KEY`
+- `AUTH_SESSION_COOKIE_NAME`
 - `AUTH_COOKIE_DOMAIN=.tonylaw.cc`
 - `AUTH_APP_URL=https://auth.tonylaw.cc`
 - `AUTH_API_URL=https://api.tonylaw.cc/auth`
@@ -176,3 +179,4 @@ If these two variables are missing, the app falls back to preview links in the A
 
 - Frontend projects share auth via cookies on `.tonylaw.cc`
 - The unified `api` service uses PostgreSQL for auth and Longbridge for option data
+- Use a different `AUTH_SESSION_COOKIE_NAME` for each environment so staging and production do not overwrite each other's login state

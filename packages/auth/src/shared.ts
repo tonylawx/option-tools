@@ -1,5 +1,6 @@
 export const DEFAULT_AUTH_APP_URL = "https://auth.tonylaw.cc";
 export const DEFAULT_COOKIE_DOMAIN = ".tonylaw.cc";
+export const DEFAULT_SESSION_COOKIE_NAME = "__Secure-tonylaw.session-token";
 
 export function isProductionAuth() {
   return process.env.NODE_ENV === "production";
@@ -20,7 +21,11 @@ export function getAuthCookieDomain() {
 }
 
 export function getSessionCookieName() {
-  return isProductionAuth() ? "__Secure-tonylaw.session-token" : "tonylaw.session-token";
+  if (process.env.AUTH_SESSION_COOKIE_NAME) {
+    return process.env.AUTH_SESSION_COOKIE_NAME;
+  }
+
+  return isProductionAuth() ? DEFAULT_SESSION_COOKIE_NAME : "tonylaw.session-token";
 }
 
 export function buildSignInUrl(callbackUrl: string) {
