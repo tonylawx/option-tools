@@ -1,0 +1,16 @@
+{
+  "name": "@tonylaw/auth",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "next": "^15.5.14",
+    "next-auth": "^4.24.13"
+  },
+  "exports": {
+    "./shared": "./src/shared.ts",
+    "./middleware": "./src/middleware.ts",
+    "./next-auth": "./src/next-auth.ts",
+    "./jwt": "./src/jwt.ts"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@tonylaw/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "postgres": "^3.4.7"
+  },
+  "exports": {
+    "./client": "./src/client.ts",
+    "./auth": "./src/auth.ts"
+  }
+}

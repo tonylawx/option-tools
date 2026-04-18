@@ -9,6 +9,4 @@ tsconfig.tsbuildinfo
 .env
 .env.*
 !.env.example
-app
-components
 Downloads
