@@ -3,7 +3,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { reportRoute } from "@/server/routes/report";
-import { searchRoute } from "@/server/routes/search";
+import { securitiesRoute } from "@/server/routes/securities";
 
 loadEnv();
 
@@ -26,7 +26,7 @@ async function bootstrap() {
   );
 
   hono.get("/api/report", reportRoute);
-  hono.get("/api/search", searchRoute);
+  hono.get("/api/securities", securitiesRoute);
   hono.get("/health", (c) => c.json({ ok: true }));
 
   serve(

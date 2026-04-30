@@ -24,9 +24,22 @@ function percentColor(value: number): string {
   return value >= 0 ? "#1f9d63" : "#c85d68";
 }
 
+function starScoreColor(starScore: number): string {
+  if (starScore <= 2) {
+    return "#c85d68";
+  }
+
+  if (starScore === 3) {
+    return "#c89a2d";
+  }
+
+  return "#1f9d63";
+}
+
 export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
   const text = uiCopy[locale];
   const eventItems = report.event.items ?? [];
+  const starColor = starScoreColor(report.score.starScore);
 
   return (
     <main style={compact ? styles.compactShell : styles.shell}>
@@ -37,8 +50,8 @@ export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
             <h2 style={styles.heroTitle}>{displaySymbol(report.symbol)} {text.pageTitle}</h2>
             <p style={styles.heroDate}>{report.header.dateLine}</p>
             <div style={styles.stars}>
-              <span style={styles.starText}>{report.header.starLine}</span>
-              <span style={styles.scoreText}>
+              <span style={{ ...styles.starText, color: starColor }}>{report.header.starLine}</span>
+              <span style={{ ...styles.scoreText, color: starColor }}>
                 {report.score.starScore}/5 {report.summary.actionLabel}
               </span>
             </div>
@@ -114,10 +127,10 @@ export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
                 <span style={styles.supportHint}>{report.support.commentary}</span>
               </div>
             </div>
-            <div style={styles.supportMeta}>
-              <span>{text.supportMetaLeft}</span>
-              <span>{text.supportMetaRight}</span>
-            </div>
+            {/*<div style={styles.supportMeta}>*/}
+            {/*  <span>{text.supportMetaLeft}</span>*/}
+            {/*  <span>{text.supportMetaRight}</span>*/}
+            {/*</div>*/}
             <div style={styles.supportGrid}>
               <div>
                 <div style={styles.supportHeaderRow}>
@@ -400,10 +413,10 @@ const styles: Record<string, React.CSSProperties> = {
     border: "1px solid rgba(29, 32, 56, 0.07)"
   },
   supportHead: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 16,
-    flexWrap: "wrap"
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 10,
+    alignItems: "start"
   },
   supportKicker: {
     margin: 0,
@@ -412,25 +425,30 @@ const styles: Record<string, React.CSSProperties> = {
   },
   supportTitle: {
     margin: "2px 0 0",
-    fontSize: 18
+    fontSize: "clamp(15px, 4.6vw, 18px)",
+    lineHeight: 1.15
   },
   supportSide: {
     display: "grid",
-    gap: 6,
-    textAlign: "right"
+    gap: 8,
+    textAlign: "left",
+    justifyItems: "start"
   },
   supportPrice: {
-    color: "var(--amber)"
+    color: "var(--amber)",
+    fontSize: "clamp(15px, 5vw, 18px)",
+    lineHeight: 1.2
   },
   percentInline: {
     marginLeft: 6,
-    fontSize: 14,
+    fontSize: "clamp(12px, 4vw, 14px)",
     fontWeight: 700
   },
   supportHint: {
     color: "var(--muted)",
-    maxWidth: 240,
-    fontSize: 12
+    maxWidth: 420,
+    fontSize: 11,
+    lineHeight: 1.55
   },
   supportTable: {
     marginTop: 8,
@@ -441,32 +459,32 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 8,
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
-    gap: 14
+    gap: 10
   },
   supportMeta: {
     marginTop: 8,
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
+    display: "grid",
+    gap: 6,
     color: "var(--muted)",
-    fontSize: 11,
-    flexWrap: "wrap"
+    fontSize: 10,
+    lineHeight: 1.5
   },
   supportHeaderRow: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: 12,
+    gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr)",
+    gap: 8,
     color: "#8a7b52",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 700
   },
   supportRow: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr 1fr",
-    gap: 12,
+    gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr)",
+    gap: 8,
     padding: "6px 0",
     borderTop: "1px solid var(--line)",
-    fontSize: 13
+    fontSize: 12,
+    alignItems: "center"
   },
   eventsCard: {
     margin: "0 12px 12px",

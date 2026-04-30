@@ -237,6 +237,36 @@ export function formatCountdown(days: number, locale: Locale) {
   return locale === "en" ? `${days} days` : `${days} 天`;
 }
 
+export function eventShortLabel(kind: "fomc" | "cpi" | "ppi", locale: Locale) {
+  if (locale === "en") {
+    if (kind === "fomc") return "FOMC";
+    if (kind === "cpi") return "CPI";
+    return "PPI";
+  }
+
+  if (kind === "fomc") return "FOMC";
+  if (kind === "cpi") return "CPI";
+  return "PPI";
+}
+
+export function earningsEventLabel(locale: Locale) {
+  return locale === "en" ? "Earnings" : "财报";
+}
+
+export function formatFiscalQuarterEarningsTitle(raw: string | null, locale: Locale) {
+  if (!raw) {
+    return locale === "en" ? "Earnings" : "财报";
+  }
+
+  const match = raw.match(/^Q([1-4])(\d{4})$/);
+  if (!match) {
+    return locale === "en" ? raw : `${raw}财报`;
+  }
+
+  const [, quarter, year] = match;
+  return locale === "en" ? `${year} Q${quarter} Earnings` : `${year}年Q${quarter}财报`;
+}
+
 export function translateEventName(name: string, locale: Locale) {
   if (locale === "en") {
     return name;

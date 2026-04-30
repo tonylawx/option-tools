@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_SYMBOL = "QQQ.US";
 const PROD_API_BASE_URL = "https://api.optix.tonylaw.cc";
+const SECURITIES_STORAGE_KEY = "optix-us-securities-cache";
 type TabKey = "report" | "calculator";
 
 function displaySymbol(symbol: string) {
@@ -55,6 +56,8 @@ export default function Page() {
   const [reportError, setReportError] = useState("");
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const attemptedRemoteQueryRef = useRef<string>("");
+  const activeRemoteQueryRef = useRef<string>("");
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -103,6 +106,36 @@ export default function Page() {
 
     return aCode.localeCompare(bCode);
   }).slice(0, 20);
+
+  function readCachedSecurities() {
+    if (typeof window === "undefined") {
+      return [] as SecuritySearchResult[];
+    }
+
+    try {
+      const raw = window.localStorage.getItem(SECURITIES_STORAGE_KEY);
+      if (!raw) {
+        return [] as SecuritySearchResult[];
+      }
+
+      const parsed = JSON.parse(raw) as SecuritySearchResult[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [] as SecuritySearchResult[];
+    }
+  }
+
+  function writeCachedSecurities(nextSecurities: SecuritySearchResult[]) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(SECURITIES_STORAGE_KEY, JSON.stringify(nextSecurities));
+    } catch {
+      // Ignore localStorage write failures.
+    }
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -163,34 +196,47 @@ export default function Page() {
   }, [selectedSymbol, locale]);
 
   useEffect(() => {
+    const cached = readCachedSecurities();
+    if (cached.length > 0) {
+      setSecurities(cached);
+      setIsSearching(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function loadSecurities() {
       setIsSearching(true);
       setSearchError("");
+      attemptedRemoteQueryRef.current = "__bootstrap__";
+      activeRemoteQueryRef.current = "__bootstrap__";
 
       try {
-        const response = await fetch(`${getApiBaseUrl()}/api/search`, {
+        const response = await fetch(`${getApiBaseUrl()}/api/securities`, {
           cache: "no-store"
         });
 
         if (!response.ok) {
           const payload = (await response.json()) as { error?: string };
-          throw new Error(payload.error ?? `Failed to search: ${response.status}`);
+          throw new Error(payload.error ?? `Failed to load securities: ${response.status}`);
         }
 
         const nextResults = (await response.json()) as SecuritySearchResult[];
         if (!cancelled) {
           setSecurities(nextResults);
+          writeCachedSecurities(nextResults);
         }
       } catch {
         if (!cancelled) {
           setSecurities([]);
           setSearchError("长桥标的池加载失败，请检查本地 LONGBRIDGE_ACCESS_TOKEN 是否有效。");
         }
+        attemptedRemoteQueryRef.current = "";
+        activeRemoteQueryRef.current = "";
       } finally {
-        if (!cancelled) {
+        if (!cancelled && activeRemoteQueryRef.current === "__bootstrap__") {
           setIsSearching(false);
+          activeRemoteQueryRef.current = "";
         }
       }
     }
@@ -201,6 +247,73 @@ export default function Page() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) {
+      setIsSearching(false);
+      attemptedRemoteQueryRef.current = "";
+      activeRemoteQueryRef.current = "";
+      return;
+    }
+
+    if (results.length > 0) {
+      setIsSearching(false);
+      activeRemoteQueryRef.current = "";
+      return;
+    }
+
+    if (attemptedRemoteQueryRef.current === normalized) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function refreshSecurities() {
+      setIsSearching(true);
+      setSearchError("");
+      attemptedRemoteQueryRef.current = normalized;
+      activeRemoteQueryRef.current = normalized;
+
+      try {
+        const response = await fetch(`${getApiBaseUrl()}/api/securities`, {
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json()) as { error?: string };
+          throw new Error(payload.error ?? `Failed to load securities: ${response.status}`);
+        }
+
+        const nextResults = (await response.json()) as SecuritySearchResult[];
+        if (!cancelled) {
+          setSecurities(nextResults);
+          writeCachedSecurities(nextResults);
+        }
+      } catch {
+        if (!cancelled) {
+          setSearchError("长桥标的池加载失败，请检查本地 LONGBRIDGE_ACCESS_TOKEN 是否有效。");
+        }
+        attemptedRemoteQueryRef.current = "";
+        activeRemoteQueryRef.current = "";
+      } finally {
+        if (!cancelled && activeRemoteQueryRef.current === normalized) {
+          setIsSearching(false);
+          activeRemoteQueryRef.current = "";
+        }
+      }
+    }
+
+    void refreshSecurities();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query, results.length]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {

@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { getFinanceCalendar, type FinanceCalendarInfo } from "@/server/report/longbridge";
 
 export type MacroEventKind = "fomc" | "cpi" | "ppi";
 
@@ -85,12 +86,14 @@ function parseFomcEvents(html: string) {
   for (const match of matches) {
     const year = Number(match[1]);
     const section = match[2];
-    const entries = Array.from(section.matchAll(/([A-Za-z]{3,9}(?:\/[A-Za-z]{3,9})?)\s+(\d{1,2})-\d{1,2}\*?/g));
+    const entries = Array.from(
+      section.matchAll(/([A-Za-z]{3,9})(?:\/([A-Za-z]{3,9}))?\s+(\d{1,2})-(\d{1,2})\*?/g)
+    );
 
     for (const entry of entries) {
-      const monthKey = entry[1].split("/")[0].toLowerCase();
-      const month = MONTH_INDEX[monthKey];
-      const day = Number(entry[2]);
+      const endMonthKey = (entry[2] ?? entry[1]).toLowerCase();
+      const month = MONTH_INDEX[endMonthKey];
+      const day = Number(entry[4]);
 
       if (!month || !Number.isFinite(day)) {
         continue;
@@ -159,6 +162,70 @@ function dedupeEvents(events: MacroEvent[]) {
   });
 }
 
+function parseLongbridgeMacroKind(info: FinanceCalendarInfo): MacroEventKind | null {
+  const content = info.content ?? "";
+
+  if (/CPI/i.test(content)) {
+    return "cpi";
+  }
+
+  if (/PPI|Producer Price/i.test(content)) {
+    return "ppi";
+  }
+
+  if (/FOMC|Fed|美联储|联邦基金|利率决议/i.test(content)) {
+    return "fomc";
+  }
+
+  return null;
+}
+
+function parseLongbridgeMacroName(kind: MacroEventKind) {
+  if (kind === "cpi") return "US CPI";
+  if (kind === "ppi") return "US PPI";
+  return "FOMC Meeting";
+}
+
+async function getLongbridgeMacroEvents() {
+  const today = new Date();
+  const startDate = today.toISOString().slice(0, 10);
+  const endDate = new Date(today);
+  endDate.setUTCDate(endDate.getUTCDate() + 365);
+
+  const response = await getFinanceCalendar({
+    date: startDate,
+    dateEnd: endDate.toISOString().slice(0, 10),
+    count: 1000,
+    offset: 0,
+    next: true,
+    types: ["macrodata"],
+    star: ["3"]
+  });
+
+  const events: MacroEvent[] = [];
+
+  for (const day of response.list ?? []) {
+    for (const info of day.infos ?? []) {
+      if (info.market !== "US") {
+        continue;
+      }
+
+      const kind = parseLongbridgeMacroKind(info);
+      if (!kind) {
+        continue;
+      }
+
+      events.push({
+        name: parseLongbridgeMacroName(kind),
+        date: day.date,
+        kind
+      });
+    }
+  }
+
+  return events;
+}
+
 async function fetchText(url: string, label: string) {
   const response = await fetch(url, {
     headers: {
@@ -196,11 +263,12 @@ export async function getMacroEvents() {
   }
 
   try {
-    const [fedHtml, blsIcs] = await Promise.all([
+    const [longbridgeEvents, fedHtml, blsIcs] = await Promise.all([
+      getLongbridgeMacroEvents().catch(() => []),
       fetchText(FED_FOMC_URL, "FOMC calendar"),
       fetchText(BLS_ICS_URL, "BLS calendar")
     ]);
-    const events = dedupeEvents([...parseFomcEvents(fedHtml), ...parseBlsEvents(blsIcs)]).sort((a, b) =>
+    const events = dedupeEvents([...longbridgeEvents, ...parseFomcEvents(fedHtml), ...parseBlsEvents(blsIcs)]).sort((a, b) =>
       a.date.localeCompare(b.date)
     );
 

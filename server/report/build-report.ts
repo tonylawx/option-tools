@@ -10,7 +10,10 @@ import {
 import type { SellPutReport } from "@/server/report/types";
 import {
   actionLabelFromStars,
+  earningsEventLabel,
+  eventShortLabel,
   formatCountdown,
+  formatFiscalQuarterEarningsTitle,
   formatMarketDate,
   Locale,
   reportKicker,
@@ -246,20 +249,8 @@ function nearestUpcomingEvent(events: MacroEvent[], referenceIsoDate: string) {
   return events.find((event) => event.date >= referenceIsoDate) ?? events[events.length - 1] ?? null;
 }
 
-function eventLabelFromKind(kind: MacroEvent["kind"], locale: Locale) {
-  if (locale === "en") {
-    if (kind === "fomc") return "FOMC";
-    if (kind === "cpi") return "CPI";
-    return "PPI";
-  }
-
-  if (kind === "fomc") return "FOMC";
-  if (kind === "cpi") return "CPI";
-  return "PPI";
-}
-
 export async function buildSellPutReport(symbol: string, locale: Locale = "zh"): Promise<SellPutReport> {
-  const [quotes, symbolCandles, vixQuotes, vixCandles, vvixLatest, vix3mLatest, latestFiling, macroEvents, earningsDate] =
+  const [quotes, symbolCandles, vixQuotes, vixCandles, vvixLatest, vix3mLatest, latestFiling, macroEvents, earningsSnapshot] =
     await Promise.all([
       getQuotes([symbol]),
       getDailyCandles(symbol, 140),
@@ -313,6 +304,8 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
   const macroSeverityKey = severityFromDays(macroDays, macroBlackout);
   const macroScore = scoreFromEventDays(macroDays, macroBlackout);
 
+  const earningsDate = earningsSnapshot?.date ?? null;
+  const earningsQuarterLabel = formatFiscalQuarterEarningsTitle(earningsSnapshot?.fiscalQuarterLabel ?? null, locale);
   const earningsIsoDate = earningsDate ? toIsoDate(earningsDate) : null;
   const earningsBlackout =
     earningsIsoDate ? buildLeadingWindowSet(tradingDays, earningsIsoDate, 3).has(currentIsoDate) : false;
@@ -334,7 +327,7 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
         const severityKey = severityFromDays(days, blackout);
 
         return {
-          label: eventLabelFromKind(event.kind, locale),
+          label: eventShortLabel(event.kind, locale),
           name: translateEventName(event.name, locale),
           dateLabel: event.date.slice(5).replace("-", "/"),
           countdownLabel: formatCountdown(days, locale),
@@ -344,8 +337,8 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
       }),
     ...(earningsIsoDate && earningsDays !== null && earningsDays >= 0 && earningsDays <= 14
       ? [{
-          label: locale === "en" ? "Earnings" : "财报",
-          name: earningsIsoDate.slice(5).replace("-", "/"),
+          label: earningsEventLabel(locale),
+          name: earningsQuarterLabel,
           dateLabel: earningsIsoDate.slice(5).replace("-", "/"),
           countdownLabel: formatCountdown(earningsDays, locale),
           severity: translateSeverity(severityMap[earningsSeverityKey], locale),
@@ -443,6 +436,7 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
       items: importantEventItems
     },
     earnings: {
+      title: earningsQuarterLabel,
       nextDateLabel: earningsIsoDate ? earningsIsoDate.slice(5).replace("-", "/") : (locale === "en" ? "Unavailable" : "暂不可用"),
       countdownLabel: earningsDays !== null ? formatCountdown(earningsDays, locale) : (locale === "en" ? "Unavailable" : "暂不可用"),
       severity: translateSeverity(severityMap[earningsSeverityKey], locale),

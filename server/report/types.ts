@@ -66,6 +66,7 @@ export type SellPutReport = {
     items: ImportantEventItem[];
   };
   earnings: {
+    title: string;
     nextDateLabel: string;
     countdownLabel: string;
     severity: string;

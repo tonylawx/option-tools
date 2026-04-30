@@ -1,33 +1,46 @@
+import { getFinanceCalendar, symbolToCounterIdCandidates, type FinanceCalendarInfo } from "@/server/report/longbridge";
+
 type CachedEarnings = {
-  date: Date | null;
+  data: EarningsSnapshot | null;
   expiresAt: number;
 };
 
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const cache = new Map<string, CachedEarnings>();
 
-function extractYahooEarningsDate(html: string) {
-  const normalized = html.replace(/\\"/g, "\"");
+export type EarningsSnapshot = {
+  date: Date;
+  fiscalQuarterLabel: string | null;
+};
 
-  if (!/Earnings Date/i.test(normalized)) {
+function extractInfoDate(info: FinanceCalendarInfo, fallbackDate: string) {
+  const explicitDate = info.date?.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+  if (explicitDate) {
+    return `${explicitDate[1]}-${explicitDate[2]}-${explicitDate[3]}`;
+  }
+
+  const dateFromTimestamp =
+    info.datetime && Number.isFinite(Number(info.datetime))
+      ? new Date(Number(info.datetime) * 1000).toISOString().slice(0, 10)
+      : null;
+
+  return dateFromTimestamp ?? fallbackDate;
+}
+
+function extractFiscalQuarterLabel(info: FinanceCalendarInfo) {
+  const period = info.ext?.financial_report?.period;
+  const year = info.content?.match(/(\d{4})/)?.[1];
+
+  if (!period || !year) {
     return null;
   }
 
-  const trendMatch = normalized.match(/"earningsTrend":\{[\s\S]{0,6000}?"earningsDate":\[\{"raw":(\d+),"fmt":"(\d{4}-\d{2}-\d{2})"/);
-  const fallbackMatch = normalized.match(/"earningsDate":\[\{"raw":(\d+),"fmt":"(\d{4}-\d{2}-\d{2})"/);
-  const match = trendMatch ?? fallbackMatch;
-
-  if (!match) {
+  const quarter = Number(period);
+  if (!Number.isFinite(quarter) || quarter < 1 || quarter > 4) {
     return null;
   }
 
-  const timestamp = Number(match[1]);
-  if (Number.isFinite(timestamp)) {
-    return new Date(timestamp * 1000);
-  }
-
-  const parsed = new Date(match[2]);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  return `Q${quarter}${year}`;
 }
 
 export async function getNextEarningsDate(symbol: string) {
@@ -36,27 +49,42 @@ export async function getNextEarningsDate(symbol: string) {
   const cached = cache.get(ticker);
 
   if (cached && cached.expiresAt > now) {
-    return cached.date;
+    return cached.data;
   }
 
-  const response = await fetch(`https://finance.yahoo.com/quote/${ticker}`, {
-    headers: {
-      "user-agent": "Mozilla/5.0"
-    },
-    cache: "no-store"
+  const today = new Date();
+  const startDate = today.toISOString().slice(0, 10);
+  const endDate = new Date(today);
+  endDate.setUTCDate(endDate.getUTCDate() + 180);
+  const response = await getFinanceCalendar({
+    date: startDate,
+    dateEnd: endDate.toISOString().slice(0, 10),
+    count: 50,
+    offset: 0,
+    next: true,
+    types: ["report", "financial"],
+    counterIds: symbolToCounterIdCandidates(symbol)
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to load earnings page for ${ticker}: ${response.status}`);
-  }
+  const days = response.list ?? [];
+  const item = days.flatMap((day) =>
+    (day.infos ?? []).map((info) => ({
+      dayDate: day.date,
+      info
+    }))
+  )[0];
 
-  const html = await response.text();
-  const date = extractYahooEarningsDate(html);
+  const data = item
+    ? {
+        date: new Date(`${extractInfoDate(item.info, item.dayDate)}T00:00:00.000Z`),
+        fiscalQuarterLabel: extractFiscalQuarterLabel(item.info)
+      }
+    : null;
 
   cache.set(ticker, {
-    date,
+    data,
     expiresAt: now + CACHE_TTL_MS
   });
 
-  return date;
+  return data;
 }
