@@ -314,29 +314,32 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
   const earningsScore = scoreFromEventDays(earningsDays, earningsBlackout);
   const importantEventItems = [
     ...macroEvents
-      .filter((event) => {
-        const days = diffInDays(currentDate, new Date(event.date));
-        return days >= 0 && days <= 14;
-      })
-      .map((event) => {
+      .flatMap((event) => {
         const days = diffInDays(currentDate, new Date(event.date));
         const blackout =
           event.kind === "fomc"
             ? buildWindowSet(tradingDays, event.date, 2, 2).has(currentIsoDate)
             : buildLeadingWindowSet(tradingDays, event.date, 1).has(currentIsoDate);
+
+        if (!(blackout || (days >= 0 && days <= 14))) {
+          return [];
+        }
+
         const severityKey = severityFromDays(days, blackout);
 
-        return {
+        return [{
+          sortDate: event.date,
           label: eventShortLabel(event.kind, locale),
           name: translateEventName(event.name, locale),
           dateLabel: event.date.slice(5).replace("-", "/"),
           countdownLabel: formatCountdown(days, locale),
           severity: translateSeverity(severityMap[severityKey], locale),
           impactsScore: blackout
-        };
+        }];
       }),
-    ...(earningsIsoDate && earningsDays !== null && earningsDays >= 0 && earningsDays <= 14
+    ...(earningsIsoDate && earningsDays !== null && (earningsBlackout || (earningsDays >= 0 && earningsDays <= 14))
       ? [{
+          sortDate: earningsIsoDate,
           label: earningsEventLabel(locale),
           name: earningsQuarterLabel,
           dateLabel: earningsIsoDate.slice(5).replace("-", "/"),
@@ -345,7 +348,9 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
           impactsScore: earningsBlackout
         }]
       : [])
-  ].sort((left, right) => left.dateLabel.localeCompare(right.dateLabel));
+  ]
+    .sort((left, right) => left.sortDate.localeCompare(right.sortDate))
+    .map(({ sortDate: _sortDate, ...item }) => item);
 
   const underlyingLast = num(mainQuote.lastDone ?? mainQuote.lastPrice);
   const vixLast = num(vixQuote.lastDone ?? vixQuote.lastPrice);

@@ -234,7 +234,15 @@ export function formatMarketDate(date: Date, locale: Locale) {
 }
 
 export function formatCountdown(days: number, locale: Locale) {
-  return locale === "en" ? `${days} days` : `${days} 天`;
+  if (locale === "en") {
+    if (days === 0) return "Today";
+    if (days < 0) return `${Math.abs(days)} days ago`;
+    return `${days} days`;
+  }
+
+  if (days === 0) return "今天";
+  if (days < 0) return `已过 ${Math.abs(days)} 天`;
+  return `还有 ${days} 天`;
 }
 
 export function eventShortLabel(kind: "fomc" | "cpi" | "ppi", locale: Locale) {
