@@ -1,10 +1,7 @@
+import { cn } from "@/lib/utils";
 import type { SellPutReport } from "@/server/report/types";
-import {
-  getVciHint,
-  Locale,
-  translateVciConclusion,
-  uiCopy
-} from "@/shared/i18n";
+import { LOCALE } from "@/shared/constants";
+import { getVciHint, type Locale, uiCopy } from "@/shared/i18n";
 
 type Props = {
   report: SellPutReport;
@@ -20,90 +17,95 @@ function displaySymbol(symbol: string) {
   return symbol.replace(/\.US$/, "");
 }
 
-function percentColor(value: number): string {
-  return value >= 0 ? "#1f9d63" : "#c85d68";
+function percentColorClass(value: number) {
+  return value >= 0 ? "text-[#1f9d63]" : "text-app-rose";
 }
 
-function starScoreColor(starScore: number): string {
+function starScoreColorClass(starScore: number) {
   if (starScore <= 2) {
-    return "#c85d68";
+    return "text-app-rose";
   }
 
   if (starScore === 3) {
-    return "#c89a2d";
+    return "text-[#c89a2d]";
   }
 
-  return "#1f9d63";
+  return "text-[#1f9d63]";
 }
 
-export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
+export function ReportPage({ report, compact = false, locale = LOCALE.ZH }: Props) {
   const text = uiCopy[locale];
   const eventItems = report.event.items ?? [];
-  const starColor = starScoreColor(report.score.starScore);
+  const starColor = starScoreColorClass(report.score.starScore);
 
   return (
-    <main style={compact ? styles.compactShell : styles.shell}>
-      <section style={compact ? styles.compactPaper : styles.paper}>
-        <section style={compact ? styles.compactHero : styles.hero}>
-          <div style={styles.heroTop}>
-            <p style={styles.heroKicker}>{report.header.kicker}</p>
-            <h2 style={styles.heroTitle}>{displaySymbol(report.symbol)} {text.pageTitle}</h2>
-            <p style={styles.heroDate}>{report.header.dateLine}</p>
-            <div style={styles.stars}>
-              <span style={{ ...styles.starText, color: starColor }}>{report.header.starLine}</span>
-              <span style={{ ...styles.scoreText, color: starColor }}>
+    <main className={cn(compact ? "p-0" : "px-4 py-8 sm:py-10")}>
+      <section
+        className={cn(
+          "mx-auto max-w-[980px]",
+          compact
+            ? ""
+            : "rounded-[28px] border border-app-line bg-app-paper px-5 py-10 shadow-app backdrop-blur-xl sm:px-8"
+        )}
+      >
+        <section className={cn("overflow-hidden rounded-3xl border border-app-navy/8 bg-[#fffaf2]", compact && "shadow-app")}>
+          <div className="bg-gradient-to-b from-app-navy to-[#252848] px-6 py-5 text-center text-white">
+            <p className="text-[11px] text-white/72">{report.header.kicker}</p>
+            <h2 className="mt-1 text-2xl font-semibold">{displaySymbol(report.symbol)} {text.pageTitle}</h2>
+            <p className="mt-1 text-[13px] text-app-gold">{report.header.dateLine}</p>
+            <div className="mt-3 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-2">
+              <span className={cn("tracking-[0.2em]", starColor)}>{report.header.starLine}</span>
+              <span className={cn("text-2xl font-semibold", starColor)}>
                 {report.score.starScore}/5 {report.summary.actionLabel}
               </span>
             </div>
           </div>
 
-          <div style={styles.metricsGrid}>
-            <article style={styles.metricCard}>
-              <h3 style={styles.cardTitle}>{text.vciTitle}</h3>
+          <div className="grid gap-3 p-3 lg:grid-cols-2">
+            <article className="rounded-[18px] border border-app-navy/7 bg-white p-4">
+              <h3 className="text-base font-semibold">{text.vciTitle}</h3>
               {report.vciItems.map((item) => (
-                <div key={item.label} style={styles.metricBlock}>
-                  <div style={styles.metricRow}>
+                <div key={item.label} className="mt-3">
+                  <div className="grid grid-cols-[minmax(72px,112px)_1fr_40px] items-center gap-3">
                     <div>
-                      <p style={styles.metricLabel}>{item.label}</p>
-                      <strong style={styles.metricValue}>{item.value}</strong>
+                      <p className="text-[11px] text-app-muted">{item.label}</p>
+                      <strong className="text-[15px]">{item.value}</strong>
                     </div>
-                    <div style={styles.barWrap}>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-app-navy/8">
                       <div
-                        style={{
-                          ...styles.barFill,
-                          width: `${item.progress}%`
-                        }}
+                        className="h-full bg-gradient-to-r from-[#e76e78] to-[#e8b05b]"
+                        style={{ width: `${item.progress}%` }}
                       />
                     </div>
-                    <span style={styles.weight}>{Math.round(item.progress)}</span>
+                    <span className="text-right text-[11px] text-app-muted">{Math.round(item.progress)}</span>
                   </div>
-                    <p style={styles.metricHintBottom}>{getVciHint(item.label, locale)}</p>
+                  <p className="mt-1.5 text-[10px] leading-4 text-app-muted">{getVciHint(item.label, locale)}</p>
                 </div>
               ))}
-              <div style={styles.vciFooter}>
-                <strong style={styles.vciValue}>VCI {fmt(report.score.vci, 3)}</strong>
-                <span style={styles.vciCall}>{translateVciConclusion(report.vciConclusion, locale)}</span>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-app-line pt-4">
+                <strong className="text-2xl text-app-rose">VCI {fmt(report.score.vci, 3)}</strong>
+                <span className="font-semibold text-app-amber">{report.vciConclusion}</span>
               </div>
             </article>
 
-            <article style={styles.metricCard}>
-              <h3 style={styles.cardTitle}>{text.marketTitle}</h3>
-              <dl style={styles.detailList}>
-                <div style={styles.detailItem}>
+            <article className="rounded-[18px] border border-app-navy/7 bg-white p-4">
+              <h3 className="text-base font-semibold">{text.marketTitle}</h3>
+              <dl className="mt-3 grid gap-2 text-sm">
+                <div className="flex items-center justify-between gap-4">
                   <dt>{displaySymbol(report.market.symbolLabel)}</dt>
                   <dd>${fmt(report.market.symbolLast)}</dd>
                 </div>
-                <div style={styles.detailItem}>
+                <div className="flex items-center justify-between gap-4">
                   <dt>{text.ma120}</dt>
                   <dd>${fmt(report.market.ma120)}</dd>
                 </div>
-                <div style={styles.detailItem}>
+                <div className="flex items-center justify-between gap-4">
                   <dt>{text.status}</dt>
                   <dd>{report.market.trendLabel}</dd>
                 </div>
-                <div style={styles.detailItem}>
+                <div className="flex items-center justify-between gap-4">
                   <dt>{text.distance}</dt>
-                  <dd style={{ color: percentColor(report.market.distanceToMa120) }}>
+                  <dd className={percentColorClass(report.market.distanceToMa120)}>
                     {fmt(report.market.distanceToMa120, 2)}%
                   </dd>
                 </div>
@@ -111,57 +113,57 @@ export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
             </article>
           </div>
 
-          <div style={styles.supportCard}>
-            <div style={styles.supportHead}>
+          <div className="mx-3 mb-3 rounded-[18px] border border-app-navy/7 bg-white p-4">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] sm:items-start">
               <div>
-                <p style={styles.supportKicker}>{displaySymbol(report.symbol)} {text.supportTitle}</p>
-                <h3 style={styles.supportTitle}>{displaySymbol(report.symbol)} ${fmt(report.support.underlyingLast)}</h3>
+                <p className="text-[11px] text-[#7b8db1]">{displaySymbol(report.symbol)} {text.supportTitle}</p>
+                <h3 className="mt-0.5 text-[clamp(15px,4.6vw,18px)] leading-tight font-semibold">
+                  {displaySymbol(report.symbol)} ${fmt(report.support.underlyingLast)}
+                </h3>
               </div>
-              <div style={styles.supportSide}>
-                <strong style={styles.supportPrice}>
+              <div className="grid justify-items-start gap-2 text-left">
+                <strong className="text-[clamp(15px,5vw,18px)] leading-tight text-app-amber">
                   {text.keySupport} ${fmt(report.support.keySupport)}
-                  <span style={{ ...styles.percentInline, color: percentColor(report.support.keySupportDistance) }}>
+                  <span className={cn("ml-1.5 text-[clamp(12px,4vw,14px)] font-semibold", percentColorClass(report.support.keySupportDistance))}>
                     ({fmt(report.support.keySupportDistance, 1)}%)
                   </span>
                 </strong>
-                <span style={styles.supportHint}>{report.support.commentary}</span>
+                <span className="max-w-[420px] text-[11px] leading-[1.55] text-app-muted">{report.support.commentary}</span>
               </div>
             </div>
-            {/*<div style={styles.supportMeta}>*/}
-            {/*  <span>{text.supportMetaLeft}</span>*/}
-            {/*  <span>{text.supportMetaRight}</span>*/}
-            {/*</div>*/}
-            <div style={styles.supportGrid}>
+
+            <div className="mt-2 grid grid-cols-2 gap-2.5">
               <div>
-                <div style={styles.supportHeaderRow}>
+                <div className="grid grid-cols-[0.9fr_1fr_0.8fr] gap-2 text-[10px] font-semibold text-[#8a7b52]">
                   <span>{text.recentLows}</span>
                   <span>{text.price}</span>
                   <span>{text.distance}</span>
                 </div>
-                <div style={styles.supportTable}>
+                <div className="mt-2 grid gap-1.5">
                   {report.support.windows.map((window) => (
-                    <div key={window.label} style={styles.supportRow}>
+                    <div key={window.label} className="grid grid-cols-[0.9fr_1fr_0.8fr] items-center gap-2 border-t border-app-line py-1.5 text-xs">
                       <span>{window.label}</span>
                       <span>${fmt(window.low)}</span>
-                      <span style={{ color: percentColor(window.distancePercent) }}>
+                      <span className={percentColorClass(window.distancePercent)}>
                         {fmt(window.distancePercent, 1)}%
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
+
               <div>
-                <div style={styles.supportHeaderRow}>
+                <div className="grid grid-cols-[0.9fr_1fr_0.8fr] gap-2 text-[10px] font-semibold text-[#8a7b52]">
                   <span>{text.fib}</span>
                   <span>{text.price}</span>
                   <span>{text.distance}</span>
                 </div>
-                <div style={styles.supportTable}>
+                <div className="mt-2 grid gap-1.5">
                   {report.support.fibLevels.map((level) => (
-                    <div key={level.label} style={styles.supportRow}>
+                    <div key={level.label} className="grid grid-cols-[0.9fr_1fr_0.8fr] items-center gap-2 border-t border-app-line py-1.5 text-xs">
                       <span>{level.label}</span>
                       <span>${fmt(level.price)}</span>
-                      <span style={{ color: percentColor(level.distancePercent) }}>
+                      <span className={percentColorClass(level.distancePercent)}>
                         {fmt(level.distancePercent, 1)}%
                       </span>
                     </div>
@@ -171,38 +173,44 @@ export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
             </div>
           </div>
 
-          <div style={styles.eventsCard}>
-            <h3 style={styles.cardTitle}>{text.eventTitle}</h3>
-            <p style={styles.eventHint}>{text.eventHint}</p>
+          <div className="mx-3 mb-3 rounded-[18px] border border-app-navy/7 bg-white p-4">
+            <h3 className="text-base font-semibold">{text.eventTitle}</h3>
+            <p className="mt-1.5 text-xs leading-6 text-app-muted">{text.eventHint}</p>
             {eventItems.length > 0 ? (
-              <div style={styles.eventsList}>
+              <div className="mt-3 grid gap-1">
                 {eventItems.map((item) => (
-                  <div key={`${item.label}-${item.name}`} style={styles.eventListRow}>
-                    <div style={styles.eventListMain}>
-                      <strong style={styles.eventListTitle}>{item.name}</strong>
-                      {item.impactsScore ? (
-                        <span style={styles.eventImpact}>{text.eventImpact}</span>
-                      ) : null}
-                    </div>
-                    <div style={styles.eventListSide}>
-                      <span style={{ ...styles.earningsMeta, color: item.impactsScore ? "#c85d68" : "var(--muted)" }}>
-                        {item.dateLabel} · {item.countdownLabel}
-                      </span>
-                      <span
-                        style={{
-                          ...styles.eventPill,
-                          background: item.impactsScore ? "rgba(200, 93, 104, 0.12)" : "var(--soft-blue)",
-                          color: item.impactsScore ? "#c85d68" : "#4f658c"
-                        }}
-                      >
-                        {item.severity}
-                      </span>
+                  <div
+                    key={`${item.label}-${item.name}`}
+                    className="border-t border-app-navy/6 py-3 first:border-t-0 first:pt-0"
+                  >
+                    <div className="grid gap-1.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <strong className="text-base leading-5">{item.name}</strong>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2.5 py-1 text-[11px]",
+                            item.impactsScore
+                              ? "bg-app-soft-rose text-app-rose"
+                              : "bg-app-soft-blue text-[#4f658c]"
+                          )}
+                        >
+                          {item.severity}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        {item.impactsScore ? (
+                          <span className="text-xs font-semibold text-app-rose">{text.eventImpact}</span>
+                        ) : null}
+                        <span className={cn("text-xs", item.impactsScore ? "text-app-rose" : "text-app-muted")}>
+                          {item.dateLabel} · {item.countdownLabel}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={styles.eventEmpty}>{text.eventNone}</div>
+              <div className="mt-3 border-t border-app-navy/6 pt-3 text-sm text-app-muted">{text.eventNone}</div>
             )}
           </div>
         </section>
@@ -210,385 +218,3 @@ export function ReportPage({ report, compact = false, locale = "zh" }: Props) {
     </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  shell: {
-    padding: "32px 16px 80px"
-  },
-  compactShell: {
-    padding: 0
-  },
-  paper: {
-    maxWidth: 980,
-    margin: "0 auto",
-    padding: "48px clamp(20px, 4vw, 48px)",
-    background: "var(--paper)",
-    border: "1px solid var(--line)",
-    borderRadius: 28,
-    boxShadow: "var(--shadow)",
-    backdropFilter: "blur(12px)"
-  },
-  compactPaper: {
-    maxWidth: 980,
-    margin: "0 auto"
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 24,
-    alignItems: "flex-start",
-    flexWrap: "wrap"
-  },
-  eyebrow: {
-    margin: 0,
-    fontSize: 12,
-    letterSpacing: "0.14em",
-    textTransform: "uppercase",
-    color: "var(--muted)"
-  },
-  title: {
-    margin: "8px 0 10px",
-    fontSize: "clamp(34px, 6vw, 56px)",
-    lineHeight: 1.02
-  },
-  meta: {
-    margin: 0,
-    color: "var(--muted)"
-  },
-  badge: {
-    padding: "12px 18px",
-    borderRadius: 999,
-    border: "1px solid rgba(201, 169, 106, 0.35)",
-    background: "rgba(201, 169, 106, 0.12)",
-    color: "var(--navy)",
-    fontWeight: 700
-  },
-  intro: {
-    display: "grid",
-    gap: 10,
-    marginTop: 28,
-    color: "#394150",
-    lineHeight: 1.9
-  },
-  hero: {
-    marginTop: 34,
-    borderRadius: 24,
-    overflow: "hidden",
-    border: "1px solid rgba(29, 32, 56, 0.08)",
-    background: "#fffaf2"
-  },
-  compactHero: {
-    marginTop: 0,
-    borderRadius: 24,
-    overflow: "hidden",
-    border: "1px solid rgba(29, 32, 56, 0.08)",
-    background: "#fffaf2",
-    boxShadow: "var(--shadow)"
-  },
-  heroTop: {
-    padding: "18px 24px",
-    background: "linear-gradient(180deg, #1d2038 0%, #252848 100%)",
-    color: "white",
-    textAlign: "center"
-  },
-  heroKicker: {
-    margin: 0,
-    color: "rgba(255,255,255,0.72)",
-    fontSize: 11
-  },
-  heroTitle: {
-    margin: "4px 0",
-    fontSize: 24
-  },
-  heroDate: {
-    margin: 0,
-    color: "#c9a96a",
-    fontSize: 13
-  },
-  stars: {
-    marginTop: 10,
-    display: "flex",
-    gap: 16,
-    justifyContent: "center",
-    alignItems: "baseline",
-    flexWrap: "wrap"
-  },
-  starText: {
-    color: "#ff7c84",
-    letterSpacing: "0.2em"
-  },
-  scoreText: {
-    fontSize: 24,
-    fontWeight: 700,
-    color: "#ffd27c"
-  },
-  metricsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: 12,
-    padding: 12
-  },
-  metricCard: {
-    background: "white",
-    borderRadius: 18,
-    padding: 14,
-    border: "1px solid rgba(29, 32, 56, 0.07)"
-  },
-  cardTitle: {
-    margin: 0,
-    fontSize: 16
-  },
-  metricRow: {
-    display: "grid",
-    gridTemplateColumns: "minmax(72px, 112px) 1fr 40px",
-    gap: 12,
-    alignItems: "center"
-  },
-  metricBlock: {
-    marginTop: 10
-  },
-  metricLabel: {
-    margin: 0,
-    color: "var(--muted)",
-    fontSize: 11
-  },
-  metricHintBottom: {
-    margin: "6px 0 0",
-    color: "var(--muted)",
-    fontSize: 10,
-    lineHeight: 1.25
-  },
-  metricValue: {
-    fontSize: 15
-  },
-  barWrap: {
-    height: 10,
-    borderRadius: 999,
-    overflow: "hidden",
-    background: "rgba(29, 32, 56, 0.08)"
-  },
-  barFill: {
-    height: "100%",
-    background: "linear-gradient(90deg, #e76e78 0%, #e8b05b 100%)"
-  },
-  weight: {
-    color: "var(--muted)",
-    fontSize: 11,
-    textAlign: "right"
-  },
-  vciFooter: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 16,
-    marginTop: 18,
-    paddingTop: 16,
-    borderTop: "1px solid var(--line)",
-    alignItems: "center",
-    flexWrap: "wrap"
-  },
-  vciValue: {
-    fontSize: 24,
-    color: "var(--rose)"
-  },
-  vciCall: {
-    color: "var(--amber)",
-    fontWeight: 700
-  },
-  detailList: {
-    margin: "12px 0 0",
-    display: "grid",
-    gap: 8,
-    fontSize: 14
-  },
-  detailItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 18
-  },
-  supportCard: {
-    margin: "0 12px 12px",
-    background: "white",
-    borderRadius: 18,
-    padding: 14,
-    border: "1px solid rgba(29, 32, 56, 0.07)"
-  },
-  supportHead: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: 10,
-    alignItems: "start"
-  },
-  supportKicker: {
-    margin: 0,
-    fontSize: 11,
-    color: "#7b8db1"
-  },
-  supportTitle: {
-    margin: "2px 0 0",
-    fontSize: "clamp(15px, 4.6vw, 18px)",
-    lineHeight: 1.15
-  },
-  supportSide: {
-    display: "grid",
-    gap: 8,
-    textAlign: "left",
-    justifyItems: "start"
-  },
-  supportPrice: {
-    color: "var(--amber)",
-    fontSize: "clamp(15px, 5vw, 18px)",
-    lineHeight: 1.2
-  },
-  percentInline: {
-    marginLeft: 6,
-    fontSize: "clamp(12px, 4vw, 14px)",
-    fontWeight: 700
-  },
-  supportHint: {
-    color: "var(--muted)",
-    maxWidth: 420,
-    fontSize: 11,
-    lineHeight: 1.55
-  },
-  supportTable: {
-    marginTop: 8,
-    display: "grid",
-    gap: 6
-  },
-  supportGrid: {
-    marginTop: 8,
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 10
-  },
-  supportMeta: {
-    marginTop: 8,
-    display: "grid",
-    gap: 6,
-    color: "var(--muted)",
-    fontSize: 10,
-    lineHeight: 1.5
-  },
-  supportHeaderRow: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr)",
-    gap: 8,
-    color: "#8a7b52",
-    fontSize: 10,
-    fontWeight: 700
-  },
-  supportRow: {
-    display: "grid",
-    gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr)",
-    gap: 8,
-    padding: "6px 0",
-    borderTop: "1px solid var(--line)",
-    fontSize: 12,
-    alignItems: "center"
-  },
-  eventsCard: {
-    margin: "0 12px 12px",
-    background: "white",
-    borderRadius: 18,
-    padding: 14,
-    border: "1px solid rgba(29, 32, 56, 0.07)"
-  },
-  eventHint: {
-    margin: "6px 0 0",
-    color: "var(--muted)",
-    fontSize: 12,
-    lineHeight: 1.5
-  },
-  eventsList: {
-    marginTop: 12,
-    display: "grid",
-    gap: 10
-  },
-  eventListRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "center",
-    padding: "12px 0",
-    borderTop: "1px solid rgba(29, 32, 56, 0.06)"
-  },
-  eventListMain: {
-    display: "grid",
-    gap: 4
-  },
-  eventListTitle: {
-    fontSize: 16,
-    lineHeight: 1.25
-  },
-  eventImpact: {
-    color: "#c85d68",
-    fontSize: 12,
-    fontWeight: 700
-  },
-  eventListSide: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-    justifyContent: "flex-end"
-  },
-  eventEmpty: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTop: "1px solid rgba(29, 32, 56, 0.06)",
-    color: "var(--muted)",
-    fontSize: 13
-  },
-  earningsBlock: {
-    display: "grid",
-    gap: 8,
-    padding: 12,
-    borderRadius: 16,
-    background: "rgba(244, 246, 252, 0.85)",
-    border: "1px solid rgba(29, 32, 56, 0.06)"
-  },
-  eventBlockTop: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10
-  },
-  eventPill: {
-    padding: "6px 10px",
-    borderRadius: 999,
-    background: "var(--soft-blue)",
-    color: "#4f658c",
-    fontSize: 11
-  },
-  earningsLabel: {
-    color: "#8a7b52",
-    fontSize: 11,
-    fontWeight: 700
-  },
-  earningsTitleText: {
-    fontSize: 18,
-    lineHeight: 1.2
-  },
-  earningsValue: {
-    fontSize: 14,
-    fontWeight: 700
-  },
-  earningsMeta: {
-    color: "var(--muted)",
-    fontSize: 12
-  },
-  inlineMetaRow: {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    alignItems: "center"
-  },
-  earningsFootnote: {
-    color: "var(--muted)",
-    fontSize: 12,
-    lineHeight: 1.5
-  },
-  docSection: {
-    marginTop: 38
-  }
-};

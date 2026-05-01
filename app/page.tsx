@@ -4,15 +4,19 @@ import { startTransition, useEffect, useRef, useState } from "react";
 import { IOSInstallBanner } from "@/components/ios-install-banner";
 import { OptionYieldCalculator } from "@/components/option-yield-calculator";
 import { ReportPage } from "@/components/report-page";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { SecuritySearchResult, SellPutReport } from "@/server/report/types";
-import { Locale, uiCopy } from "@/shared/i18n";
+import { HOSTNAME, LOCALE, SEARCH_BOOTSTRAP_QUERY, TAB, TabKey } from "@/shared/constants";
+import type { Locale } from "@/shared/i18n";
+import { uiCopy } from "@/shared/i18n";
 
 export const dynamic = "force-dynamic";
 
 const DEFAULT_SYMBOL = "QQQ.US";
 const PROD_API_BASE_URL = "https://api.optix.tonylaw.cc";
 const SECURITIES_STORAGE_KEY = "optix-us-securities-cache";
-type TabKey = "report" | "calculator";
 
 function displaySymbol(symbol: string) {
   return symbol.replace(/\.US$/, "");
@@ -36,7 +40,7 @@ function getApiBaseUrl() {
     return process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/$/, "");
   }
 
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+  if (typeof window !== "undefined" && window.location.hostname === HOSTNAME.LOCALHOST) {
     return "http://localhost:3001";
   }
 
@@ -44,14 +48,15 @@ function getApiBaseUrl() {
 }
 
 export default function Page() {
-  const [locale, setLocale] = useState<Locale>("zh");
-  const [tab, setTab] = useState<TabKey>("report");
+  const [locale, setLocale] = useState<Locale>(LOCALE.ZH);
+  const [tab, setTab] = useState<TabKey>(TAB.REPORT);
   const [report, setReport] = useState<SellPutReport | null>(null);
   const [selectedSymbol, setSelectedSymbol] = useState(DEFAULT_SYMBOL);
   const [query, setQuery] = useState(displaySymbol(DEFAULT_SYMBOL));
   const [securities, setSecurities] = useState<SecuritySearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(true);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [reportError, setReportError] = useState("");
   const [open, setOpen] = useState(false);
@@ -66,7 +71,7 @@ export default function Page() {
 
     const params = new URLSearchParams(window.location.search);
     const nextSymbol = normalizeSymbol(params.get("symbol"));
-    const nextTab = params.get("tab") === "calculator" ? "calculator" : "report";
+    const nextTab = params.get("tab") === TAB.CALCULATOR ? TAB.CALCULATOR : TAB.REPORT;
     setTab(nextTab);
     setSelectedSymbol(nextSymbol);
     setQuery(displaySymbol(nextSymbol));
@@ -143,7 +148,7 @@ export default function Page() {
     }
 
     const params = new URLSearchParams(window.location.search);
-    if (params.get("symbol") === selectedSymbol) {
+    if (params.get("symbol") === selectedSymbol && params.get("tab") === tab) {
       return;
     }
 
@@ -179,7 +184,7 @@ export default function Page() {
       } catch {
         if (!cancelled) {
           setReport(null);
-          setReportError("长桥行情拉取失败，请检查凭证、权限或标的代码。");
+          setReportError(uiCopy[locale].reportLoadFailure);
         }
       } finally {
         if (!cancelled) {
@@ -208,8 +213,8 @@ export default function Page() {
     async function loadSecurities() {
       setIsSearching(true);
       setSearchError("");
-      attemptedRemoteQueryRef.current = "__bootstrap__";
-      activeRemoteQueryRef.current = "__bootstrap__";
+      attemptedRemoteQueryRef.current = SEARCH_BOOTSTRAP_QUERY;
+      activeRemoteQueryRef.current = SEARCH_BOOTSTRAP_QUERY;
 
       try {
         const response = await fetch(`${getApiBaseUrl()}/api/securities`, {
@@ -229,12 +234,12 @@ export default function Page() {
       } catch {
         if (!cancelled) {
           setSecurities([]);
-          setSearchError("长桥标的池加载失败，请检查本地 LONGBRIDGE_ACCESS_TOKEN 是否有效。");
+          setSearchError(uiCopy[locale].securitiesLoadFailure);
         }
         attemptedRemoteQueryRef.current = "";
         activeRemoteQueryRef.current = "";
       } finally {
-        if (!cancelled && activeRemoteQueryRef.current === "__bootstrap__") {
+        if (!cancelled && activeRemoteQueryRef.current === SEARCH_BOOTSTRAP_QUERY) {
           setIsSearching(false);
           activeRemoteQueryRef.current = "";
         }
@@ -246,13 +251,9 @@ export default function Page() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
     const normalized = query.trim().toLowerCase();
     if (!normalized) {
       setIsSearching(false);
@@ -296,7 +297,7 @@ export default function Page() {
         }
       } catch {
         if (!cancelled) {
-          setSearchError("长桥标的池加载失败，请检查本地 LONGBRIDGE_ACCESS_TOKEN 是否有效。");
+          setSearchError(uiCopy[locale].securitiesLoadFailure);
         }
         attemptedRemoteQueryRef.current = "";
         activeRemoteQueryRef.current = "";
@@ -313,7 +314,7 @@ export default function Page() {
     return () => {
       cancelled = true;
     };
-  }, [query, results.length]);
+  }, [locale, query, results.length]);
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
@@ -335,103 +336,143 @@ export default function Page() {
   }
 
   const text = uiCopy[locale];
+  const searchStatusText = isLoadingReport
+    ? text.loading
+    : isSearching
+      ? text.searching
+      : report
+        ? displaySymbol(report.symbol)
+        : "--";
+  const showSearchClear = isSearchFocused && Boolean(query) && !isLoadingReport && !isSearching;
 
   return (
-    <main style={styles.shell}>
-      <section style={styles.paper}>
+    <main className="px-4 py-3 sm:py-4">
+      <section className="mx-auto max-w-[980px]">
         <IOSInstallBanner locale={locale} />
-        <div style={styles.topBar}>
-          <div style={styles.tabSwitch}>
-            <button
-              type="button"
-              onClick={() => setTab("report")}
-              style={tab === "report" ? { ...styles.tabButton, ...styles.tabButtonActive } : styles.tabButton}
+
+        <div className="mb-2.5 flex items-center gap-2">
+          <div className="inline-flex min-w-0 flex-1 gap-1 rounded-full border border-app-line bg-white/82 p-1 shadow-app">
+            <Button
+              className={cn(
+                "h-12 flex-1 px-4 text-sm sm:h-11",
+                tab === TAB.REPORT ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
+              )}
+              variant="ghost"
+              onClick={() => setTab(TAB.REPORT)}
             >
               {text.reportTab}
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("calculator")}
-              style={tab === "calculator" ? { ...styles.tabButton, ...styles.tabButtonActive } : styles.tabButton}
+            </Button>
+            <Button
+              className={cn(
+                "h-12 flex-1 px-4 text-sm sm:h-11",
+                tab === TAB.CALCULATOR ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
+              )}
+              variant="ghost"
+              onClick={() => setTab(TAB.CALCULATOR)}
             >
               {text.calculatorTab}
-            </button>
+            </Button>
           </div>
-          <div style={styles.localeSwitch}>
-            <button
-              type="button"
-              onClick={() => setLocale("zh")}
-              style={locale === "zh" ? { ...styles.localeButton, ...styles.localeButtonActive } : styles.localeButton}
+
+          <div className="inline-flex shrink-0 gap-1 rounded-full border border-app-line bg-white/82 p-1 shadow-app">
+            <Button
+              className={cn(
+                "h-12 min-w-12 px-3 text-sm sm:h-11",
+                locale === LOCALE.ZH ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
+              )}
+              variant="ghost"
+              onClick={() => setLocale(LOCALE.ZH)}
             >
-              中
-            </button>
-            <button
-              type="button"
-              onClick={() => setLocale("en")}
-              style={locale === "en" ? { ...styles.localeButton, ...styles.localeButtonActive } : styles.localeButton}
+              {text.localeZh}
+            </Button>
+            <Button
+              className={cn(
+                "h-12 min-w-12 px-3 text-sm sm:h-11",
+                locale === LOCALE.EN ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
+              )}
+              variant="ghost"
+              onClick={() => setLocale(LOCALE.EN)}
             >
-              EN
-            </button>
+              {text.localeEn}
+            </Button>
           </div>
         </div>
 
-        {tab === "report" ? (
+        {tab === TAB.REPORT ? (
           <>
-            <div ref={boxRef} style={styles.searchWrap}>
-              <div style={styles.searchTopRow}>
-                <label htmlFor="symbol-search" style={styles.searchLabel}>
+            <div ref={boxRef} className="relative mb-2.5">
+              <div className="mb-1.5 flex items-center justify-between gap-3">
+                <label htmlFor="symbol-search" className="text-xs font-medium tracking-[0.08em] text-app-muted uppercase">
                   {text.searchLabel}
                 </label>
               </div>
-              <div style={styles.searchBox}>
-                <input
-                  id="symbol-search"
-                  value={query}
-                  onChange={(event) => {
-                    setQuery(event.target.value);
-                    setOpen(true);
-                  }}
-                  onFocus={() => setOpen(true)}
-                  placeholder={text.searchPlaceholder}
-                  style={styles.searchInput}
-                  autoComplete="off"
-                />
-                <div style={styles.searchStatus}>
-                  {isLoadingReport
-                    ? text.loading
-                    : isSearching
-                      ? text.searching
-                      : report
-                        ? displaySymbol(report.symbol)
-                        : "--"}
+
+              <div className="rounded-[22px] border border-app-line bg-white/86 p-2 shadow-app backdrop-blur-sm">
+                <div className="flex items-center gap-3 rounded-[18px] bg-[#fcfbf8] px-4 py-3">
+                  <Input
+                    id="symbol-search"
+                    className="min-w-0 flex-1 text-lg font-semibold"
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setOpen(true);
+                    }}
+                    onFocus={() => {
+                      setOpen(true);
+                      setIsSearchFocused(true);
+                    }}
+                    onBlur={() => setIsSearchFocused(false)}
+                    placeholder={text.searchPlaceholder}
+                    unstyled
+                    autoComplete="off"
+                  />
+                  <div className="flex shrink-0 items-center justify-end">
+                    {showSearchClear ? (
+                      <Button
+                        className="size-7 rounded-full bg-app-navy/8 p-0 text-base leading-none text-app-muted hover:bg-app-navy/12"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={text.clearInput}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          setQuery("");
+                          setOpen(true);
+                        }}
+                      >
+                        ×
+                      </Button>
+                    ) : (
+                      <div className="text-right text-sm font-medium text-app-muted">
+                        {searchStatusText}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {open && results.length > 0 ? (
-                <div style={styles.dropdown}>
+                <div className="absolute z-20 mt-2 grid w-full gap-1 rounded-[22px] border border-app-line bg-white/96 p-2 shadow-app backdrop-blur-sm">
                   {results.map((security) => (
-                    <button
+                    <Button
                       key={security.symbol}
-                      type="button"
+                      className="h-auto justify-start rounded-2xl px-4 py-3 text-left hover:bg-app-navy/6"
+                      variant="ghost"
                       onClick={() => chooseSecurity(security)}
-                      style={styles.option}
                     >
-                      <strong>{displaySymbol(security.symbol)}</strong>
-                      <span style={styles.optionName}>{security.name}</span>
-                    </button>
+                      <div className="grid gap-0.5">
+                        <strong className="text-sm text-app-navy">{displaySymbol(security.symbol)}</strong>
+                        <span className="text-xs text-app-muted">{security.name}</span>
+                      </div>
+                    </Button>
                   ))}
                 </div>
               ) : null}
 
               {searchError ? (
-                <p style={styles.errorText}>
-                  {locale === "zh" ? searchError : text.searchLoadError}
-                </p>
+                <p className="mt-2 text-sm text-app-rose">{searchError}</p>
               ) : null}
               {reportError ? (
-                <p style={styles.errorText}>
-                  {locale === "zh" ? reportError : text.reportLoadError}
-                </p>
+                <p className="mt-2 text-sm text-app-rose">{reportError}</p>
               ) : null}
             </div>
 
@@ -444,140 +485,3 @@ export default function Page() {
     </main>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  shell: {
-    padding: "14px 16px 20px"
-  },
-  paper: {
-    maxWidth: 980,
-    margin: "0 auto"
-  },
-  topBar: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 10
-  },
-  tabSwitch: {
-    display: "inline-flex",
-    gap: 4,
-    padding: 4,
-    borderRadius: 999,
-    border: "1px solid var(--line)",
-    background: "rgba(255,255,255,0.82)",
-    boxShadow: "var(--shadow)"
-  },
-  tabButton: {
-    border: "none",
-    background: "transparent",
-    color: "var(--muted)",
-    fontSize: 13,
-    padding: "8px 14px",
-    borderRadius: 999,
-    cursor: "pointer",
-    fontFamily: "inherit"
-  },
-  tabButtonActive: {
-    background: "#1d2038",
-    color: "#fff"
-  },
-  searchWrap: {
-    position: "relative",
-    marginBottom: 10
-  },
-  searchTopRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 6
-  },
-  searchLabel: {
-    color: "var(--muted)",
-    fontSize: 12
-  },
-  localeSwitch: {
-    display: "inline-flex",
-    gap: 4,
-    padding: 4,
-    borderRadius: 999,
-    border: "1px solid var(--line)",
-    background: "rgba(255,255,255,0.78)"
-  },
-  localeButton: {
-    border: "none",
-    background: "transparent",
-    color: "var(--muted)",
-    fontSize: 12,
-    padding: "5px 10px",
-    borderRadius: 999,
-    cursor: "pointer",
-    fontFamily: "inherit"
-  },
-  localeButtonActive: {
-    background: "#1d2038",
-    color: "#fff"
-  },
-  searchBox: {
-    display: "grid",
-    gridTemplateColumns: "1fr auto",
-    gap: 12,
-    padding: "10px 12px",
-    borderRadius: 16,
-    border: "1px solid var(--line)",
-    background: "rgba(255,255,255,0.82)",
-    boxShadow: "var(--shadow)"
-  },
-  searchInput: {
-    width: "100%",
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    color: "var(--ink)",
-    fontSize: 16,
-    fontFamily: "inherit"
-  },
-  searchStatus: {
-    alignSelf: "center",
-    color: "var(--muted)",
-    fontSize: 13,
-    whiteSpace: "nowrap"
-  },
-  dropdown: {
-    position: "absolute",
-    top: "calc(100% + 8px)",
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    display: "grid",
-    gap: 6,
-    padding: 8,
-    borderRadius: 18,
-    border: "1px solid var(--line)",
-    background: "rgba(255,255,255,0.96)",
-    boxShadow: "0 18px 50px rgba(23, 29, 45, 0.16)",
-    maxHeight: 240,
-    overflowY: "auto"
-  },
-  option: {
-    display: "grid",
-    gap: 4,
-    textAlign: "left",
-    border: "none",
-    borderRadius: 12,
-    background: "transparent",
-    padding: "10px 12px",
-    color: "var(--ink)",
-    cursor: "pointer"
-  },
-  optionName: {
-    color: "var(--muted)",
-    fontSize: 13
-  },
-  errorText: {
-    margin: "10px 4px 0",
-    color: "#b14d57",
-    fontSize: 13
-  }
-};

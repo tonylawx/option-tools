@@ -1,7 +1,22 @@
-export type Locale = "zh" | "en";
+import {
+  ACTION_LABEL,
+  ActionLabel,
+  LOCALE,
+  Locale,
+  MACRO_EVENT_KIND,
+  MacroEventKind,
+  SEVERITY,
+  SeverityKey,
+  TREND_LABEL,
+  TrendLabel,
+  VCI_CONCLUSION,
+  VciConclusion
+} from "@/shared/constants";
+
+export type { Locale };
 
 export function normalizeLocale(value?: string | null): Locale {
-  return value === "en" ? "en" : "zh";
+  return value === LOCALE.EN ? LOCALE.EN : LOCALE.ZH;
 }
 
 export const uiCopy = {
@@ -11,10 +26,16 @@ export const uiCopy = {
     searchPlaceholder: "输入代码或公司名，例如 AAPL / Tesla",
     loading: "加载中...",
     searching: "搜索中...",
+    clearInput: "清空",
     searchLoadError: "长桥标的池加载失败，请检查本地 LONGBRIDGE_ACCESS_TOKEN 是否有效。",
     reportLoadError: "长桥行情拉取失败，请检查凭证、权限或标的代码。",
+    securitiesLoadFailure: "长桥标的池加载失败，请检查本地 LONGBRIDGE_ACCESS_TOKEN 是否有效。",
+    reportLoadFailure: "长桥行情拉取失败，请检查凭证、权限或标的代码。",
     installBannerTitle: "iPhone 添加到桌面",
     installBannerBody: "在 Safari 点分享按钮，再选“添加到主屏幕”，就能像 App 一样打开。",
+    installBannerClose: "知道了",
+    localeZh: "中",
+    localeEn: "EN",
     reportTab: "可行性报告",
     calculatorTab: "年化收益计算器",
     vciTitle: "波动率综合指数 [VCI]",
@@ -37,6 +58,8 @@ export const uiCopy = {
     eventMacro: "宏观事件",
     eventEarnings: "财报窗口",
     eventImpact: "黑窗影响评分",
+    unavailable: "暂不可用",
+    notAvailable: "暂无",
     macroLabel: "宏观",
     earningsTitle: "个股财报",
     earningsNext: "下一次财报",
@@ -67,10 +90,16 @@ export const uiCopy = {
     searchPlaceholder: "Enter ticker or company, e.g. AAPL / Tesla",
     loading: "Loading...",
     searching: "Searching...",
+    clearInput: "Clear",
     searchLoadError: "Security list failed to load.",
     reportLoadError: "Report failed to load.",
+    securitiesLoadFailure: "Security list failed to load.",
+    reportLoadFailure: "Report failed to load.",
     installBannerTitle: "Add to Home Screen",
     installBannerBody: "In Safari, tap Share and then Add to Home Screen to launch it like an app.",
+    installBannerClose: "Close",
+    localeZh: "中",
+    localeEn: "EN",
     reportTab: "Feasibility Report",
     calculatorTab: "Annualized Yield",
     vciTitle: "Volatility Composite Index [VCI]",
@@ -93,6 +122,8 @@ export const uiCopy = {
     eventMacro: "Macro Event",
     eventEarnings: "Earnings Window",
     eventImpact: "Blackout impacts score",
+    unavailable: "Unavailable",
+    notAvailable: "N/A",
     macroLabel: "Macro",
     earningsTitle: "Earnings",
     earningsNext: "Next Earnings",
@@ -119,44 +150,83 @@ export const uiCopy = {
   }
 } as const;
 
-export function translateActionLabel(label: string, locale: Locale) {
-  if (locale === "en") {
-    if (label === "开仓") return "Open";
-    if (label === "谨慎") return "Cautious";
-    if (label === "回避") return "Avoid";
+const actionLabelCopy: Record<Locale, Record<ActionLabel, string>> = {
+  [LOCALE.ZH]: {
+    [ACTION_LABEL.OPEN]: "开仓",
+    [ACTION_LABEL.CAUTIOUS]: "谨慎",
+    [ACTION_LABEL.AVOID]: "回避"
+  },
+  [LOCALE.EN]: {
+    [ACTION_LABEL.OPEN]: "Open",
+    [ACTION_LABEL.CAUTIOUS]: "Cautious",
+    [ACTION_LABEL.AVOID]: "Avoid"
   }
+};
 
-  return label;
+const trendLabelCopy: Record<Locale, Record<TrendLabel, string>> = {
+  [LOCALE.ZH]: {
+    [TREND_LABEL.ABOVE_MA]: "均线上方",
+    [TREND_LABEL.BELOW_MA]: "均线下方"
+  },
+  [LOCALE.EN]: {
+    [TREND_LABEL.ABOVE_MA]: "Above MA",
+    [TREND_LABEL.BELOW_MA]: "Below MA"
+  }
+};
+
+const severityCopy: Record<Locale, Record<SeverityKey, string>> = {
+  [LOCALE.ZH]: {
+    [SEVERITY.ROUTINE]: "常规观察",
+    [SEVERITY.EVENT_WINDOW]: "事件窗口",
+    [SEVERITY.BLACKOUT]: "黑窗期"
+  },
+  [LOCALE.EN]: {
+    [SEVERITY.ROUTINE]: "Routine Watch",
+    [SEVERITY.EVENT_WINDOW]: "Event Window",
+    [SEVERITY.BLACKOUT]: "Blackout"
+  }
+};
+
+const vciConclusionCopy: Record<Locale, Record<VciConclusion, string>> = {
+  [LOCALE.ZH]: {
+    [VCI_CONCLUSION.GOOD_TO_SELL]: "适合开仓",
+    [VCI_CONCLUSION.WATCH]: "观望",
+    [VCI_CONCLUSION.AVOID]: "回避"
+  },
+  [LOCALE.EN]: {
+    [VCI_CONCLUSION.GOOD_TO_SELL]: "Good to Sell",
+    [VCI_CONCLUSION.WATCH]: "Watch",
+    [VCI_CONCLUSION.AVOID]: "Avoid"
+  }
+};
+
+const macroEventNameCopy: Record<Locale, Record<MacroEventKind, string>> = {
+  [LOCALE.ZH]: {
+    [MACRO_EVENT_KIND.FOMC]: "FOMC 会议",
+    [MACRO_EVENT_KIND.CPI]: "美国 CPI",
+    [MACRO_EVENT_KIND.PPI]: "美国 PPI"
+  },
+  [LOCALE.EN]: {
+    [MACRO_EVENT_KIND.FOMC]: "FOMC Meeting",
+    [MACRO_EVENT_KIND.CPI]: "US CPI",
+    [MACRO_EVENT_KIND.PPI]: "US PPI"
+  }
+};
+
+export function translateActionLabel(label: ActionLabel, locale: Locale) {
+  return actionLabelCopy[locale][label];
 }
 
-export function translateTrendLabel(label: string, locale: Locale) {
-  if (locale === "en") {
-    if (label === "均线上方") return "Above MA";
-    if (label === "均线下方") return "Below MA";
-  }
-
-  return label;
+export function translateTrendLabel(label: TrendLabel, locale: Locale) {
+  return trendLabelCopy[locale][label];
 }
 
-export function translateSeverity(label: string, locale: Locale) {
-  if (locale === "en") {
-    if (label === "常规观察") return "Routine Watch";
-    if (label === "事件窗口") return "Event Window";
-    if (label === "黑窗期") return "Blackout";
-  }
-
-  return label;
+export function translateSeverity(label: SeverityKey, locale: Locale) {
+  return severityCopy[locale][label];
 }
 
-export function translateVciConclusion(label: string, locale: Locale) {
-  if (locale === "en") {
-    return label
-      .replace("适合开仓", "Good to Sell")
-      .replace("观望", "Watch")
-      .replace("回避", "Avoid");
-  }
-
-  return label;
+export function translateVciConclusion(label: VciConclusion, locale: Locale) {
+  return vciConclusionCopy[locale][label];
 }
 
 export function getVciHint(label: string, locale: Locale) {
@@ -179,35 +249,33 @@ export function getVciHint(label: string, locale: Locale) {
 }
 
 export function reportKicker(locale: Locale) {
-  return locale === "en"
+  return locale === LOCALE.EN
     ? "This report is a quantitative framework for options only, not investment advice."
     : "本策略仅作为期权量化思路，不作为投资建议。";
 }
 
 export function actionLabelFromStars(stars: number, locale: Locale) {
-  const label = stars >= 4 ? "开仓" : stars === 3 ? "谨慎" : "回避";
+  const label = stars >= 4 ? ACTION_LABEL.OPEN : stars === 3 ? ACTION_LABEL.CAUTIOUS : ACTION_LABEL.AVOID;
   return translateActionLabel(label, locale);
 }
 
 export function vciConclusionLabel(vci: number, locale: Locale) {
-  const label = vci > 0.6 ? "适合开仓" : vci < 0.4 ? "回避" : "观望";
-  return locale === "en"
-    ? vci > 0.6
-      ? "Good to Sell"
-      : vci < 0.4
-        ? "Avoid"
-        : "Watch"
-    : label;
+  const label = vci > 0.6
+    ? VCI_CONCLUSION.GOOD_TO_SELL
+    : vci < 0.4
+      ? VCI_CONCLUSION.AVOID
+      : VCI_CONCLUSION.WATCH;
+  return translateVciConclusion(label, locale);
 }
 
 export function supportCommentary(supportDistance: number, locale: Locale) {
   if (supportDistance >= 7) {
-    return locale === "en"
+    return locale === LOCALE.EN
       ? "Price still has some cushion above key lows, so deeper OTM strikes remain worth screening."
       : "价格离关键低点仍有缓冲，适合继续筛选更深虚值行权价。";
   }
 
-  return locale === "en"
+  return locale === LOCALE.EN
     ? "Price is not far from key lows, so the seller's margin of safety looks thinner."
     : "价格距离关键低点不远，卖方安全垫偏薄。";
 }
@@ -225,7 +293,7 @@ export function formatMarketDate(date: Date, locale: Locale) {
     timeZone: "America/New_York",
     day: "2-digit"
   }).format(date);
-  const weekday = new Intl.DateTimeFormat(locale === "en" ? "en-US" : "zh-CN", {
+  const weekday = new Intl.DateTimeFormat(locale === LOCALE.EN ? "en-US" : "zh-CN", {
     timeZone: "America/New_York",
     weekday: "long"
   }).format(date);
@@ -234,7 +302,7 @@ export function formatMarketDate(date: Date, locale: Locale) {
 }
 
 export function formatCountdown(days: number, locale: Locale) {
-  if (locale === "en") {
+  if (locale === LOCALE.EN) {
     if (days === 0) return "Today";
     if (days < 0) return `${Math.abs(days)} days ago`;
     return `${days} days`;
@@ -245,43 +313,28 @@ export function formatCountdown(days: number, locale: Locale) {
   return `还有 ${days} 天`;
 }
 
-export function eventShortLabel(kind: "fomc" | "cpi" | "ppi", locale: Locale) {
-  if (locale === "en") {
-    if (kind === "fomc") return "FOMC";
-    if (kind === "cpi") return "CPI";
-    return "PPI";
-  }
-
-  if (kind === "fomc") return "FOMC";
-  if (kind === "cpi") return "CPI";
-  return "PPI";
+export function eventShortLabel(kind: MacroEventKind, _locale: Locale) {
+  return kind.toUpperCase();
 }
 
 export function earningsEventLabel(locale: Locale) {
-  return locale === "en" ? "Earnings" : "财报";
+  return locale === LOCALE.EN ? "Earnings" : "财报";
 }
 
 export function formatFiscalQuarterEarningsTitle(raw: string | null, locale: Locale) {
   if (!raw) {
-    return locale === "en" ? "Earnings" : "财报";
+    return earningsEventLabel(locale);
   }
 
   const match = raw.match(/^Q([1-4])(\d{4})$/);
   if (!match) {
-    return locale === "en" ? raw : `${raw}财报`;
+    return locale === LOCALE.EN ? raw : `${raw}财报`;
   }
 
   const [, quarter, year] = match;
-  return locale === "en" ? `${year} Q${quarter} Earnings` : `${year}年Q${quarter}财报`;
+  return locale === LOCALE.EN ? `${year} Q${quarter} Earnings` : `${year}年Q${quarter}财报`;
 }
 
-export function translateEventName(name: string, locale: Locale) {
-  if (locale === "en") {
-    return name;
-  }
-
-  if (name === "FOMC Meeting") return "FOMC 会议";
-  if (name === "US CPI") return "美国 CPI";
-  if (name === "US PPI") return "美国 PPI";
-  return name;
+export function translateEventName(kind: MacroEventKind, locale: Locale) {
+  return macroEventNameCopy[locale][kind];
 }

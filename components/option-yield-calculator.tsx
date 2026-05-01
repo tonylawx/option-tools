@@ -1,12 +1,13 @@
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LOCALE, OPTION_MODE, OptionMode } from "@/shared/constants";
 import type { Locale } from "@/shared/i18n";
 import { uiCopy } from "@/shared/i18n";
-import { useMemo, useState } from "react";
 
 type Props = {
   locale?: Locale;
 };
-
-type OptionMode = "put" | "call";
 
 function fmt(value: number, digits = 2) {
   return value.toFixed(digits);
@@ -17,9 +18,48 @@ function parseNumber(value: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export function OptionYieldCalculator({ locale = "zh" }: Props) {
+function ClearableInput({
+  inputMode,
+  value,
+  onChange,
+  ariaLabel
+}: {
+  inputMode: "decimal" | "numeric";
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+}) {
+  const [focused, setFocused] = useState(false);
+
+  return (
+    <div className="relative flex items-center">
+      <Input
+        className="pr-10"
+        inputMode={inputMode}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+      />
+      {focused && value ? (
+        <Button
+          className="absolute right-2 top-1/2 size-6 -translate-y-1/2 rounded-full bg-app-navy/8 p-0 text-base leading-none text-app-muted hover:bg-app-navy/12"
+          variant="ghost"
+          size="icon"
+          aria-label={ariaLabel}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onChange("")}
+        >
+          ×
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+export function OptionYieldCalculator({ locale = LOCALE.ZH }: Props) {
   const text = uiCopy[locale];
-  const [mode, setMode] = useState<OptionMode>("put");
+  const [mode, setMode] = useState<OptionMode>(OPTION_MODE.PUT);
   const [premium, setPremium] = useState("2.35");
   const [strike, setStrike] = useState("500");
   const [daysToExpiry, setDaysToExpiry] = useState("35");
@@ -36,7 +76,7 @@ export function OptionYieldCalculator({ locale = "zh" }: Props) {
     const collateral = strikeValue * shares;
     const simpleReturn = collateral > 0 ? (premiumIncome / collateral) * 100 : 0;
     const annualizedReturn = simpleReturn * (365 / daysValue);
-    const breakeven = mode === "put"
+    const breakeven = mode === OPTION_MODE.PUT
       ? Math.max(strikeValue - premiumValue, 0)
       : strikeValue + premiumValue;
 
@@ -50,98 +90,104 @@ export function OptionYieldCalculator({ locale = "zh" }: Props) {
   }, [contracts, daysToExpiry, mode, premium, strike]);
 
   return (
-    <section style={styles.shell}>
-      <div style={styles.hero}>
-        <p style={styles.kicker}>{text.calculatorKicker}</p>
-        <h2 style={styles.title}>{text.calculatorTitle}</h2>
-        <p style={styles.subtitle}>{text.calculatorSubtitle}</p>
-        <div style={styles.modeSwitch}>
-          <button
-            type="button"
-            onClick={() => setMode("put")}
-            style={mode === "put" ? { ...styles.modeButton, ...styles.modeButtonActive } : styles.modeButton}
+    <section className="overflow-hidden rounded-3xl border border-app-navy/8 bg-[#fffaf2] shadow-app">
+      <div className="bg-gradient-to-b from-app-navy to-[#252848] px-6 py-5 text-white">
+        <p className="m-0 text-[11px] text-white/72">{text.calculatorKicker}</p>
+        <h2 className="mt-1 text-2xl font-semibold">{text.calculatorTitle}</h2>
+        <p className="mt-1 text-[13px] text-[#d9d6cf]">{text.calculatorSubtitle}</p>
+        <div className="mt-3 inline-flex gap-1 rounded-full border border-white/16 bg-white/8 p-1">
+          <Button
+            className={mode === OPTION_MODE.PUT
+              ? "bg-white text-app-navy hover:bg-white/92"
+              : "text-white/78 hover:bg-white/10 hover:text-white"}
+            variant="ghost"
+            size="sm"
+            onClick={() => setMode(OPTION_MODE.PUT)}
           >
             {text.shortPutMode}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("call")}
-            style={mode === "call" ? { ...styles.modeButton, ...styles.modeButtonActive } : styles.modeButton}
+          </Button>
+          <Button
+            className={mode === OPTION_MODE.CALL
+              ? "bg-white text-app-navy hover:bg-white/92"
+              : "text-white/78 hover:bg-white/10 hover:text-white"}
+            variant="ghost"
+            size="sm"
+            onClick={() => setMode(OPTION_MODE.CALL)}
           >
             {text.shortCallMode}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div style={styles.grid}>
-        <article style={styles.card}>
-          <h3 style={styles.cardTitle}>{text.calculatorInputs}</h3>
-          <div style={styles.formGrid}>
-            <label style={styles.field}>
-              <span style={styles.fieldLabel}>{text.premiumLabel}</span>
-              <input
+      <div className="grid gap-3 p-3 lg:grid-cols-2">
+        <article className="rounded-[18px] border border-app-navy/7 bg-white p-4">
+          <h3 className="text-base font-semibold">{text.calculatorInputs}</h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs text-app-muted">{text.premiumLabel}</span>
+              <ClearableInput
                 inputMode="decimal"
                 value={premium}
-                onChange={(event) => setPremium(event.target.value)}
-                style={styles.input}
+                onChange={setPremium}
+                ariaLabel={text.clearInput}
               />
             </label>
-            <label style={styles.field}>
-              <span style={styles.fieldLabel}>{text.strikeLabel}</span>
-              <input
+            <label className="grid gap-1.5">
+              <span className="text-xs text-app-muted">{text.strikeLabel}</span>
+              <ClearableInput
                 inputMode="decimal"
                 value={strike}
-                onChange={(event) => setStrike(event.target.value)}
-                style={styles.input}
+                onChange={setStrike}
+                ariaLabel={text.clearInput}
               />
             </label>
-            <label style={styles.field}>
-              <span style={styles.fieldLabel}>{text.daysLabel}</span>
-              <input
+            <label className="grid gap-1.5">
+              <span className="text-xs text-app-muted">{text.daysLabel}</span>
+              <ClearableInput
                 inputMode="numeric"
                 value={daysToExpiry}
-                onChange={(event) => setDaysToExpiry(event.target.value)}
-                style={styles.input}
+                onChange={setDaysToExpiry}
+                ariaLabel={text.clearInput}
               />
             </label>
-            <label style={styles.field}>
-              <span style={styles.fieldLabel}>{text.contractsLabel}</span>
-              <input
+            <label className="grid gap-1.5">
+              <span className="text-xs text-app-muted">{text.contractsLabel}</span>
+              <ClearableInput
                 inputMode="numeric"
                 value={contracts}
-                onChange={(event) => setContracts(event.target.value)}
-                style={styles.input}
+                onChange={setContracts}
+                ariaLabel={text.clearInput}
               />
             </label>
           </div>
-          <div style={styles.noteBox}>
-            <strong style={styles.noteTitle}>{text.calculatorAssumptionTitle}</strong>
-            <p style={styles.noteText}>
-              {mode === "put" ? text.calculatorAssumptionBody : text.calculatorAssumptionBodyCall}
+          <div className="mt-3 rounded-2xl bg-app-soft-blue px-3 py-3">
+            <strong className="mb-1 block text-xs">{text.calculatorAssumptionTitle}</strong>
+            <p className="text-xs leading-6 text-app-muted">
+              {mode === OPTION_MODE.PUT ? text.calculatorAssumptionBody : text.calculatorAssumptionBodyCall}
             </p>
           </div>
         </article>
 
-        <article style={styles.card}>
-          <h3 style={styles.cardTitle}>{text.calculatorResults}</h3>
-          <div style={styles.resultGrid}>
-            <div style={styles.resultRow}>
+        <article className="rounded-[18px] border border-app-navy/7 bg-white p-4">
+          <h3 className="text-base font-semibold">{text.calculatorResults}</h3>
+          <div className="mt-3 grid gap-0.5">
+            <div className="flex items-center justify-between gap-4 border-t border-app-line py-2.5 text-sm first:border-t-0 first:pt-0">
               <span>{text.premiumIncomeLabel}</span>
               <strong>${fmt(result.premiumIncome)}</strong>
             </div>
-            <div style={styles.resultRow}>
+            <div className="flex items-center justify-between gap-4 border-t border-app-line py-2.5 text-sm">
               <span>{text.collateralLabel}</span>
               <strong>${fmt(result.collateral)}</strong>
             </div>
-            <div style={styles.resultRow}>
+            <div className="flex items-center justify-between gap-4 border-t border-app-line py-2.5 text-sm">
               <span>{text.simpleReturnLabel}</span>
-              <strong style={{ color: "#1f9d63" }}>{fmt(result.simpleReturn, 2)}%</strong>
+              <strong className="text-[#1f9d63]">{fmt(result.simpleReturn, 2)}%</strong>
             </div>
-            <div style={styles.resultRow}>
+            <div className="flex items-center justify-between gap-4 border-t border-app-line py-2.5 text-sm">
               <span>{text.annualizedReturnLabel}</span>
-              <strong style={styles.annualizedValue}>{fmt(result.annualizedReturn, 2)}%</strong>
+              <strong className="text-app-amber">{fmt(result.annualizedReturn, 2)}%</strong>
             </div>
-            <div style={styles.resultRow}>
+            <div className="flex items-center justify-between gap-4 border-t border-app-line py-2.5 text-sm">
               <span>{text.breakevenLabel}</span>
               <strong>${fmt(result.breakeven)}</strong>
             </div>
@@ -151,129 +197,3 @@ export function OptionYieldCalculator({ locale = "zh" }: Props) {
     </section>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  shell: {
-    borderRadius: 24,
-    overflow: "hidden",
-    border: "1px solid rgba(29, 32, 56, 0.08)",
-    background: "#fffaf2",
-    boxShadow: "var(--shadow)"
-  },
-  hero: {
-    padding: "18px 24px",
-    background: "linear-gradient(180deg, #1d2038 0%, #252848 100%)",
-    color: "white"
-  },
-  kicker: {
-    margin: 0,
-    color: "rgba(255,255,255,0.72)",
-    fontSize: 11
-  },
-  title: {
-    margin: "4px 0 6px",
-    fontSize: 24
-  },
-  subtitle: {
-    margin: 0,
-    color: "#d9d6cf",
-    fontSize: 13
-  },
-  modeSwitch: {
-    marginTop: 12,
-    display: "inline-flex",
-    gap: 4,
-    padding: 4,
-    borderRadius: 999,
-    border: "1px solid rgba(255,255,255,0.16)",
-    background: "rgba(255,255,255,0.08)"
-  },
-  modeButton: {
-    border: "none",
-    background: "transparent",
-    color: "rgba(255,255,255,0.78)",
-    fontSize: 12,
-    padding: "7px 12px",
-    borderRadius: 999,
-    cursor: "pointer",
-    fontFamily: "inherit"
-  },
-  modeButtonActive: {
-    background: "#fff",
-    color: "#1d2038"
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: 12,
-    padding: 12
-  },
-  card: {
-    background: "white",
-    borderRadius: 18,
-    padding: 14,
-    border: "1px solid rgba(29, 32, 56, 0.07)"
-  },
-  cardTitle: {
-    margin: 0,
-    fontSize: 16
-  },
-  formGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 12,
-    marginTop: 14
-  },
-  field: {
-    display: "grid",
-    gap: 6
-  },
-  fieldLabel: {
-    fontSize: 12,
-    color: "var(--muted)"
-  },
-  input: {
-    width: "100%",
-    border: "1px solid var(--line)",
-    outline: "none",
-    background: "#fcfbf8",
-    color: "var(--ink)",
-    fontSize: 16,
-    padding: "10px 12px",
-    borderRadius: 14,
-    fontFamily: "inherit"
-  },
-  noteBox: {
-    marginTop: 14,
-    padding: 12,
-    borderRadius: 14,
-    background: "rgba(40, 73, 129, 0.08)"
-  },
-  noteTitle: {
-    display: "block",
-    marginBottom: 4,
-    fontSize: 12
-  },
-  noteText: {
-    margin: 0,
-    fontSize: 12,
-    color: "var(--muted)",
-    lineHeight: 1.5
-  },
-  resultGrid: {
-    display: "grid",
-    gap: 10,
-    marginTop: 14
-  },
-  resultRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 16,
-    padding: "10px 0",
-    borderTop: "1px solid var(--line)",
-    fontSize: 14
-  },
-  annualizedValue: {
-    color: "var(--amber)"
-  }
-};

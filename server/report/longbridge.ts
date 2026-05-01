@@ -1,12 +1,13 @@
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import type { SecuritySearchResult } from "@/server/report/types";
+import { FinanceCalendarType, MARKET } from "@/shared/constants";
 
 type LongbridgeModule = typeof import("longbridge");
 type QuoteContext = Awaited<ReturnType<LongbridgeModule["QuoteContext"]["new"]>>;
 type HttpClient = InstanceType<LongbridgeModule["HttpClient"]>;
 
-export type FinanceCalendarType = "macrodata" | "report" | "financial" | "dividend" | "ipo" | "closed";
+export type { FinanceCalendarType };
 
 export type FinanceCalendarInfo = {
   content?: string;
@@ -177,7 +178,7 @@ export function symbolToCounterIdCandidates(symbol: string) {
     return [`IX/${market}/${code.slice(1)}`];
   }
 
-  if (market === "US") {
+  if (market === MARKET.US) {
     return [`ETF/${market}/${code}`, `ST/${market}/${code}`];
   }
 

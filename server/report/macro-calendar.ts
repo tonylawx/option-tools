@@ -1,16 +1,15 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { getFinanceCalendar, type FinanceCalendarInfo } from "@/server/report/longbridge";
+import { FINANCE_CALENDAR_TYPE, MACRO_EVENT_KIND, MARKET, SEVERITY, MacroEventKind, SeverityKey } from "@/shared/constants";
 
-export type MacroEventKind = "fomc" | "cpi" | "ppi";
+export type { MacroEventKind };
 
 export type MacroEvent = {
   name: string;
   date: string;
   kind: MacroEventKind;
 };
-
-type SeverityKey = "routine" | "event_window" | "blackout";
 
 type CachedEvents = {
   events: MacroEvent[];
@@ -20,6 +19,11 @@ type CachedEvents = {
 const FED_FOMC_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm";
 const BLS_ICS_URL = "https://www.bls.gov/schedule/news_release/bls.ics";
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const LONG_BRIDGE_MACRO_PATTERNS = {
+  [MACRO_EVENT_KIND.CPI]: /CPI/i,
+  [MACRO_EVENT_KIND.PPI]: /PPI|Producer Price/i,
+  [MACRO_EVENT_KIND.FOMC]: /FOMC|Fed|美联储|联邦基金|利率决议/i
+} as const;
 
 let cache: CachedEvents | null = null;
 let lastGoodEvents: MacroEvent[] | null = null;
@@ -100,9 +104,9 @@ function parseFomcEvents(html: string) {
       }
 
       events.push({
-        name: "FOMC Meeting",
+        name: MACRO_EVENT_KIND.FOMC,
         date: asIsoDate(year, month, day),
-        kind: "fomc"
+        kind: MACRO_EVENT_KIND.FOMC
       });
     }
   }
@@ -138,12 +142,12 @@ function parseBlsEvents(ics: string) {
     }
 
     if (summary.includes("Consumer Price Index")) {
-      events.push({ name: "US CPI", date, kind: "cpi" });
+      events.push({ name: MACRO_EVENT_KIND.CPI, date, kind: MACRO_EVENT_KIND.CPI });
       continue;
     }
 
     if (summary.includes("Producer Price Index")) {
-      events.push({ name: "US PPI", date, kind: "ppi" });
+      events.push({ name: MACRO_EVENT_KIND.PPI, date, kind: MACRO_EVENT_KIND.PPI });
     }
   }
 
@@ -165,25 +169,23 @@ function dedupeEvents(events: MacroEvent[]) {
 function parseLongbridgeMacroKind(info: FinanceCalendarInfo): MacroEventKind | null {
   const content = info.content ?? "";
 
-  if (/CPI/i.test(content)) {
-    return "cpi";
+  if (LONG_BRIDGE_MACRO_PATTERNS[MACRO_EVENT_KIND.CPI].test(content)) {
+    return MACRO_EVENT_KIND.CPI;
   }
 
-  if (/PPI|Producer Price/i.test(content)) {
-    return "ppi";
+  if (LONG_BRIDGE_MACRO_PATTERNS[MACRO_EVENT_KIND.PPI].test(content)) {
+    return MACRO_EVENT_KIND.PPI;
   }
 
-  if (/FOMC|Fed|美联储|联邦基金|利率决议/i.test(content)) {
-    return "fomc";
+  if (LONG_BRIDGE_MACRO_PATTERNS[MACRO_EVENT_KIND.FOMC].test(content)) {
+    return MACRO_EVENT_KIND.FOMC;
   }
 
   return null;
 }
 
 function parseLongbridgeMacroName(kind: MacroEventKind) {
-  if (kind === "cpi") return "US CPI";
-  if (kind === "ppi") return "US PPI";
-  return "FOMC Meeting";
+  return kind;
 }
 
 async function getLongbridgeMacroEvents() {
@@ -198,7 +200,7 @@ async function getLongbridgeMacroEvents() {
     count: 1000,
     offset: 0,
     next: true,
-    types: ["macrodata"],
+    types: [FINANCE_CALENDAR_TYPE.MACRODATA],
     star: ["3"]
   });
 
@@ -206,7 +208,7 @@ async function getLongbridgeMacroEvents() {
 
   for (const day of response.list ?? []) {
     for (const info of day.infos ?? []) {
-      if (info.market !== "US") {
+      if (info.market !== MARKET.US) {
         continue;
       }
 
@@ -300,7 +302,11 @@ export async function getNextMacroEvent(referenceDate: Date) {
 
   const days = diffInDays(current, new Date(next.date));
   const score = days <= 4 ? 0 : days <= 7 ? 8 : days <= 14 ? 14 : 20;
-  const severityKey: SeverityKey = days <= 4 ? "blackout" : days <= 7 ? "event_window" : "routine";
+  const severityKey: SeverityKey = days <= 4
+    ? SEVERITY.BLACKOUT
+    : days <= 7
+      ? SEVERITY.EVENT_WINDOW
+      : SEVERITY.ROUTINE;
 
   return {
     ...next,

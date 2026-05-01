@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { Locale } from "@/shared/i18n";
 import { uiCopy } from "@/shared/i18n";
 
@@ -35,51 +36,14 @@ export function IOSInstallBanner({ locale = "zh" }: Props) {
   }
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.copy}>
-        <strong style={styles.title}>{text.installBannerTitle}</strong>
-        <span style={styles.body}>{text.installBannerBody}</span>
+    <div className="mb-2.5 flex items-center justify-between gap-3 rounded-[18px] border border-app-gold/35 bg-[rgba(255,250,242,0.92)] px-3 py-2.5 shadow-app backdrop-blur-sm">
+      <div className="grid gap-0.5">
+        <strong className="text-[13px]">{text.installBannerTitle}</strong>
+        <span className="text-xs text-app-muted">{text.installBannerBody}</span>
       </div>
-      <button type="button" onClick={() => setVisible(false)} style={styles.close}>
-        {locale === "zh" ? "知道了" : "Close"}
-      </button>
+      <Button className="whitespace-nowrap px-3 py-2 text-xs" onClick={() => setVisible(false)}>
+        {text.installBannerClose}
+      </Button>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  wrap: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    padding: "10px 12px",
-    marginBottom: 10,
-    borderRadius: 18,
-    border: "1px solid rgba(201, 169, 106, 0.35)",
-    background: "rgba(255, 250, 242, 0.92)",
-    boxShadow: "var(--shadow)"
-  },
-  copy: {
-    display: "grid",
-    gap: 2
-  },
-  title: {
-    fontSize: 13
-  },
-  body: {
-    fontSize: 12,
-    color: "var(--muted)"
-  },
-  close: {
-    border: "none",
-    background: "#1d2038",
-    color: "#fff",
-    borderRadius: 999,
-    padding: "8px 12px",
-    fontSize: 12,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    whiteSpace: "nowrap"
-  }
-};

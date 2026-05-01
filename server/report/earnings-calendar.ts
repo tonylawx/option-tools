@@ -1,4 +1,5 @@
 import { getFinanceCalendar, symbolToCounterIdCandidates, type FinanceCalendarInfo } from "@/server/report/longbridge";
+import { FINANCE_CALENDAR_TYPE } from "@/shared/constants";
 
 type CachedEarnings = {
   data: EarningsSnapshot | null;
@@ -62,7 +63,7 @@ export async function getNextEarningsDate(symbol: string) {
     count: 50,
     offset: 0,
     next: true,
-    types: ["report", "financial"],
+    types: [FINANCE_CALENDAR_TYPE.REPORT, FINANCE_CALENDAR_TYPE.FINANCIAL],
     counterIds: symbolToCounterIdCandidates(symbol)
   });
 

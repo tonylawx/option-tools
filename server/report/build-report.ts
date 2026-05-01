@@ -9,6 +9,12 @@ import {
 } from "@/server/report/longbridge";
 import type { SellPutReport } from "@/server/report/types";
 import {
+  MACRO_EVENT_KIND,
+  SeverityKey,
+  TREND_LABEL,
+  VCI_CONCLUSION
+} from "@/shared/constants";
+import {
   actionLabelFromStars,
   earningsEventLabel,
   eventShortLabel,
@@ -20,7 +26,9 @@ import {
   supportCommentary,
   translateEventName,
   translateSeverity,
-  translateTrendLabel
+  translateTrendLabel,
+  translateVciConclusion,
+  uiCopy
 } from "@/shared/i18n";
 
 type CandleLike = {
@@ -34,8 +42,6 @@ type QuoteLike = {
   lastPrice?: unknown;
   timestamp?: unknown;
 };
-
-type SeverityKey = "routine" | "event_window" | "blackout";
 
 function num(value: unknown, fallback = 0) {
   if (typeof value === "number") {
@@ -128,7 +134,11 @@ function buildVci(vix: number, vixHistory: number[], vvix: number, vix3m: number
     tsProgress * 0.08;
 
   const vci = weightedScore / 100;
-  const conclusion = vci > 0.6 ? "适合开仓" : vci < 0.4 ? "回避" : "观望";
+  const conclusion = vci > 0.6
+    ? VCI_CONCLUSION.GOOD_TO_SELL
+    : vci < 0.4
+      ? VCI_CONCLUSION.AVOID
+      : VCI_CONCLUSION.WATCH;
 
   return {
     vci,
@@ -280,11 +290,6 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
   const reportTimestamp = new Date();
   const currentDate = currentMarketDate(reportTimestamp);
   const currentIsoDate = toIsoDate(currentDate);
-  const severityMap = {
-    routine: "常规观察",
-    event_window: "事件窗口",
-    blackout: "黑窗期"
-  } as const;
   const macro = nearestUpcomingEvent(macroEvents, currentIsoDate);
   if (!macro) {
     throw new Error("No macro events available");
@@ -293,7 +298,7 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
   const tradingDays = await getTradingDays(toIsoDate(addDays(currentDate, -10)), toIsoDate(addDays(currentDate, 45)));
 
   const macroBlackoutDates = macroEvents.flatMap((event) => {
-    if (event.kind === "fomc") {
+    if (event.kind === MACRO_EVENT_KIND.FOMC) {
       return [...buildWindowSet(tradingDays, event.date, 2, 2)];
     }
 
@@ -317,7 +322,7 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
       .flatMap((event) => {
         const days = diffInDays(currentDate, new Date(event.date));
         const blackout =
-          event.kind === "fomc"
+          event.kind === MACRO_EVENT_KIND.FOMC
             ? buildWindowSet(tradingDays, event.date, 2, 2).has(currentIsoDate)
             : buildLeadingWindowSet(tradingDays, event.date, 1).has(currentIsoDate);
 
@@ -330,10 +335,10 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
         return [{
           sortDate: event.date,
           label: eventShortLabel(event.kind, locale),
-          name: translateEventName(event.name, locale),
+          name: translateEventName(event.kind, locale),
           dateLabel: event.date.slice(5).replace("-", "/"),
           countdownLabel: formatCountdown(days, locale),
-          severity: translateSeverity(severityMap[severityKey], locale),
+          severity: translateSeverity(severityKey, locale),
           impactsScore: blackout
         }];
       }),
@@ -344,7 +349,7 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
           name: earningsQuarterLabel,
           dateLabel: earningsIsoDate.slice(5).replace("-", "/"),
           countdownLabel: formatCountdown(earningsDays, locale),
-          severity: translateSeverity(severityMap[earningsSeverityKey], locale),
+          severity: translateSeverity(earningsSeverityKey, locale),
           impactsScore: earningsBlackout
         }]
       : [])
@@ -368,7 +373,7 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
   const ma120 = sma(symbolSeries.slice(-120));
   const distanceToMa120 = pctDistance(underlyingLast, ma120);
   const trendScore = scoreFromDistance(distanceToMa120);
-  const trendLabel = distanceToMa120 >= 0 ? "均线上方" : "均线下方";
+  const trendLabel = distanceToMa120 >= 0 ? TREND_LABEL.ABOVE_MA : TREND_LABEL.BELOW_MA;
 
   const supportBuckets = [20, 60, 120].map((days) => {
     const slice = (symbolCandles as CandleLike[]).slice(-days);
@@ -417,7 +422,7 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
       trend: trendScore
     },
     vciItems: vciBlock.items,
-    vciConclusion: `${vciBlock.vci.toFixed(3)} ${vciBlock.conclusion}`,
+    vciConclusion: `${vciBlock.vci.toFixed(3)} ${translateVciConclusion(vciBlock.conclusion, locale)}`,
     market: {
       symbolLabel: symbol,
       symbolLast: underlyingLast,
@@ -434,21 +439,21 @@ export async function buildSellPutReport(symbol: string, locale: Locale = "zh"):
       fibLevels
     },
     event: {
-      name: translateEventName(macro.name, locale),
+      name: translateEventName(macro.kind, locale),
       dateLabel: macro.date.slice(5).replace("-", "/"),
       countdownLabel: formatCountdown(macroDays, locale),
-      severity: translateSeverity(severityMap[macroSeverityKey], locale),
+      severity: translateSeverity(macroSeverityKey, locale),
       items: importantEventItems
     },
     earnings: {
       title: earningsQuarterLabel,
-      nextDateLabel: earningsIsoDate ? earningsIsoDate.slice(5).replace("-", "/") : (locale === "en" ? "Unavailable" : "暂不可用"),
-      countdownLabel: earningsDays !== null ? formatCountdown(earningsDays, locale) : (locale === "en" ? "Unavailable" : "暂不可用"),
-      severity: translateSeverity(severityMap[earningsSeverityKey], locale),
-      latestFilingTitle: latestFiling?.title ?? (locale === "en" ? "Unavailable" : "暂不可用"),
+      nextDateLabel: earningsIsoDate ? earningsIsoDate.slice(5).replace("-", "/") : uiCopy[locale].unavailable,
+      countdownLabel: earningsDays !== null ? formatCountdown(earningsDays, locale) : uiCopy[locale].unavailable,
+      severity: translateSeverity(earningsSeverityKey, locale),
+      latestFilingTitle: latestFiling?.title ?? uiCopy[locale].unavailable,
       latestFilingDateLabel: latestFiling?.publishedAt
         ? latestFiling.publishedAt.toISOString().slice(5, 10).replace("-", "/")
-        : (locale === "en" ? "N/A" : "暂无")
+        : uiCopy[locale].notAvailable
     }
   };
 }
