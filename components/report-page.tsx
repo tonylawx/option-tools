@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { SellPutReport } from "@/server/report/types";
 import { LOCALE } from "@/shared/constants";
-import { getVciHint, type Locale, uiCopy } from "@/shared/i18n";
+import { getVciHint, type Locale, uiCopy, vciConclusionLabel } from "@/shared/i18n";
 
 type Props = {
   report: SellPutReport;
@@ -33,10 +33,24 @@ function starScoreColorClass(starScore: number) {
   return "text-[#1f9d63]";
 }
 
+function vciConclusionColorClass(vci: number) {
+  if (vci > 0.6) {
+    return "text-[#1f9d63]";
+  }
+
+  if (vci < 0.4) {
+    return "text-app-rose";
+  }
+
+  return "text-[#c89a2d]";
+}
+
 export function ReportPage({ report, compact = false, locale = LOCALE.ZH }: Props) {
   const text = uiCopy[locale];
   const eventItems = report.event.items ?? [];
   const starColor = starScoreColorClass(report.score.starScore);
+  const vciConclusionColor = vciConclusionColorClass(report.score.vci);
+  const vciConclusionText = vciConclusionLabel(report.score.vci, locale);
 
   return (
     <main className={cn(compact ? "p-0" : "px-4 py-8 sm:py-10")}>
@@ -83,8 +97,8 @@ export function ReportPage({ report, compact = false, locale = LOCALE.ZH }: Prop
                 </div>
               ))}
               <div className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-app-line pt-4">
-                <strong className="text-2xl text-app-rose">VCI {fmt(report.score.vci, 3)}</strong>
-                <span className="font-semibold text-app-amber">{report.vciConclusion}</span>
+                <strong className={cn("text-2xl", vciConclusionColor)}>VCI {fmt(report.score.vci, 3)}</strong>
+                <span className={cn("text-2xl font-semibold", vciConclusionColor)}>{vciConclusionText}</span>
               </div>
             </article>
 
@@ -183,20 +197,18 @@ export function ReportPage({ report, compact = false, locale = LOCALE.ZH }: Prop
                     key={`${item.label}-${item.name}`}
                     className="border-t border-app-navy/6 py-3 first:border-t-0 first:pt-0"
                   >
-                    <div className="grid gap-1.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <strong className="text-base leading-5">{item.name}</strong>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-2.5 py-1 text-[11px]",
-                            item.impactsScore
-                              ? "bg-app-soft-rose text-app-rose"
-                              : "bg-app-soft-blue text-[#4f658c]"
-                          )}
-                        >
-                          {item.severity}
-                        </span>
-                      </div>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5">
+                      <strong className="text-base leading-5">{item.name}</strong>
+                      <span
+                        className={cn(
+                          "col-start-2 row-span-2 self-center shrink-0 rounded-full px-2.5 py-1 text-[11px]",
+                          item.impactsScore
+                            ? "bg-app-soft-rose text-app-rose"
+                            : "bg-app-soft-blue text-[#4f658c]"
+                        )}
+                      >
+                        {item.severity}
+                      </span>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         {item.impactsScore ? (
                           <span className="text-xs font-semibold text-app-rose">{text.eventImpact}</span>

@@ -16,12 +16,16 @@
   "dependencies": {
     "@hono/node-server": "^1.14.4",
     "@vercel/analytics": "^2.0.1",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "dotenv": "^16.4.7",
     "hono": "^4.8.3",
     "longbridge": "^4.0.5",
     "longbridge-linux-x64-gnu": "4.0.5",
+    "lucide-react": "^1.14.0",
     "next": "^15.3.0",
+    "radix-ui": "^1.4.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^3.5.0"

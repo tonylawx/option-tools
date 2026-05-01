@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LOCALE, OPTION_MODE, OptionMode } from "@/shared/constants";
 import type { Locale } from "@/shared/i18n";
 import { uiCopy } from "@/shared/i18n";
@@ -95,28 +96,30 @@ export function OptionYieldCalculator({ locale = LOCALE.ZH }: Props) {
         <p className="m-0 text-[11px] text-white/72">{text.calculatorKicker}</p>
         <h2 className="mt-1 text-2xl font-semibold">{text.calculatorTitle}</h2>
         <p className="mt-1 text-[13px] text-[#d9d6cf]">{text.calculatorSubtitle}</p>
-        <div className="mt-3 inline-flex gap-1 rounded-full border border-white/16 bg-white/8 p-1">
-          <Button
-            className={mode === OPTION_MODE.PUT
-              ? "bg-white text-app-navy hover:bg-white/92"
-              : "text-white/78 hover:bg-white/10 hover:text-white"}
-            variant="ghost"
-            size="sm"
-            onClick={() => setMode(OPTION_MODE.PUT)}
+        <ToggleGroup
+          className="mt-3 rounded-full border border-white/16 bg-white/8 p-1"
+          spacing={1}
+          type="single"
+          value={mode}
+          onValueChange={(value) => {
+            if (value) {
+              setMode(value as OptionMode);
+            }
+          }}
+        >
+          <ToggleGroupItem
+            className="!rounded-full border-0 px-3 text-white/78 hover:bg-white/10 hover:text-white data-[state=on]:bg-white data-[state=on]:text-app-navy"
+            value={OPTION_MODE.PUT}
           >
             {text.shortPutMode}
-          </Button>
-          <Button
-            className={mode === OPTION_MODE.CALL
-              ? "bg-white text-app-navy hover:bg-white/92"
-              : "text-white/78 hover:bg-white/10 hover:text-white"}
-            variant="ghost"
-            size="sm"
-            onClick={() => setMode(OPTION_MODE.CALL)}
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            className="!rounded-full border-0 px-3 text-white/78 hover:bg-white/10 hover:text-white data-[state=on]:bg-white data-[state=on]:text-app-navy"
+            value={OPTION_MODE.CALL}
           >
             {text.shortCallMode}
-          </Button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       <div className="grid gap-3 p-3 lg:grid-cols-2">

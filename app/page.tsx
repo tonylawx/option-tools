@@ -6,6 +6,7 @@ import { OptionYieldCalculator } from "@/components/option-yield-calculator";
 import { ReportPage } from "@/components/report-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
 import type { SecuritySearchResult, SellPutReport } from "@/server/report/types";
 import { HOSTNAME, LOCALE, SEARCH_BOOTSTRAP_QUERY, TAB, TabKey } from "@/shared/constants";
@@ -17,6 +18,8 @@ export const dynamic = "force-dynamic";
 const DEFAULT_SYMBOL = "QQQ.US";
 const PROD_API_BASE_URL = "https://api.optix.tonylaw.cc";
 const SECURITIES_STORAGE_KEY = "optix-us-securities-cache";
+const SECURITIES_STORAGE_VERSION = 1;
+const MIN_VALID_SECURITIES_CACHE_SIZE = 100;
 
 function displaySymbol(symbol: string) {
   return symbol.replace(/\.US$/, "");
@@ -45,6 +48,95 @@ function getApiBaseUrl() {
   }
 
   return PROD_API_BASE_URL;
+}
+
+function ReportSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-app-navy/8 bg-[#fffaf2] shadow-app animate-pulse">
+      <div className="bg-gradient-to-b from-app-navy to-[#252848] px-6 py-5">
+        <div className="h-3 w-28 rounded-full bg-white/16" />
+        <div className="mt-3 h-8 w-56 rounded-full bg-white/22" />
+        <div className="mt-2 h-4 w-40 rounded-full bg-white/14" />
+        <div className="mt-4 flex flex-wrap gap-3">
+          <div className="h-5 w-28 rounded-full bg-white/18" />
+          <div className="h-7 w-24 rounded-full bg-white/22" />
+        </div>
+      </div>
+
+      <div className="grid gap-3 p-3 lg:grid-cols-2">
+        <div className="rounded-[18px] border border-app-navy/7 bg-white p-4">
+          <div className="h-5 w-36 rounded-full bg-app-navy/8" />
+          <div className="mt-4 space-y-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-2">
+                    <div className="h-3 w-12 rounded-full bg-app-navy/8" />
+                    <div className="h-4 w-16 rounded-full bg-app-navy/10" />
+                  </div>
+                  <div className="h-2.5 flex-1 rounded-full bg-app-navy/8" />
+                  <div className="h-3 w-8 rounded-full bg-app-navy/8" />
+                </div>
+                <div className="mt-2 h-3 w-40 rounded-full bg-app-navy/6" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center justify-between border-t border-app-line pt-4">
+            <div className="h-8 w-32 rounded-full bg-app-navy/10" />
+            <div className="h-8 w-24 rounded-full bg-app-navy/10" />
+          </div>
+        </div>
+
+        <div className="rounded-[18px] border border-app-navy/7 bg-white p-4">
+          <div className="h-5 w-28 rounded-full bg-app-navy/8" />
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="flex items-center justify-between gap-4">
+                <div className="h-4 w-16 rounded-full bg-app-navy/8" />
+                <div className="h-4 w-20 rounded-full bg-app-navy/10" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-3 mb-3 rounded-[18px] border border-app-navy/7 bg-white p-4">
+        <div className="h-5 w-32 rounded-full bg-app-navy/8" />
+        <div className="mt-3 h-6 w-56 rounded-full bg-app-navy/10" />
+        <div className="mt-2 h-4 w-64 rounded-full bg-app-navy/6" />
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index}>
+              <div className="h-4 w-32 rounded-full bg-app-navy/8" />
+              <div className="mt-3 space-y-2">
+                {Array.from({ length: 4 }).map((__, row) => (
+                  <div key={row} className="h-8 rounded-xl bg-app-navy/6" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mx-3 mb-3 rounded-[18px] border border-app-navy/7 bg-white p-4">
+        <div className="h-5 w-24 rounded-full bg-app-navy/8" />
+        <div className="mt-3 h-4 w-72 max-w-full rounded-full bg-app-navy/6" />
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="border-t border-app-navy/6 pt-3 first:border-t-0 first:pt-0">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="h-5 w-28 rounded-full bg-app-navy/10" />
+                  <div className="h-4 w-36 rounded-full bg-app-navy/6" />
+                </div>
+                <div className="h-7 w-20 rounded-full bg-app-navy/8" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Page() {
@@ -77,29 +169,29 @@ export default function Page() {
     setQuery(displaySymbol(nextSymbol));
   }, []);
 
-  const results = securities.filter((security) => {
-    const normalized = query.trim().toLowerCase();
-    if (!normalized) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const rankedSecurities = securities.filter((security) => {
+    if (!normalizedQuery) {
       return true;
     }
 
     return (
-      security.symbol.toLowerCase().includes(normalized) ||
-      security.name.toLowerCase().includes(normalized) ||
-      displaySymbol(security.symbol).toLowerCase().includes(normalized)
+      security.symbol.toLowerCase().includes(normalizedQuery) ||
+      security.name.toLowerCase().includes(normalizedQuery) ||
+      displaySymbol(security.symbol).toLowerCase().includes(normalizedQuery)
     );
   }).sort((a, b) => {
-    const normalized = query.trim().toLowerCase();
     const aCode = displaySymbol(a.symbol).toLowerCase();
     const bCode = displaySymbol(b.symbol).toLowerCase();
     const aName = a.name.toLowerCase();
     const bName = b.name.toLowerCase();
 
     const rank = (code: string, name: string) => {
-      if (code === normalized) return 0;
-      if (code.startsWith(normalized)) return 1;
-      if (name.startsWith(normalized)) return 2;
-      if (code.includes(normalized)) return 3;
+      if (code === normalizedQuery) return 0;
+      if (code.startsWith(normalizedQuery)) return 1;
+      if (name.startsWith(normalizedQuery)) return 2;
+      if (code.includes(normalizedQuery)) return 3;
       return 4;
     };
 
@@ -110,7 +202,21 @@ export default function Page() {
     if (byCodeLength !== 0) return byCodeLength;
 
     return aCode.localeCompare(bCode);
-  }).slice(0, 20);
+  });
+
+  const results = (() => {
+    if (!normalizedQuery) {
+      return rankedSecurities.slice(0, 20);
+    }
+
+    if (rankedSecurities.length >= 5) {
+      return rankedSecurities.slice(0, 20);
+    }
+
+    const seen = new Set(rankedSecurities.map((security) => security.symbol));
+    const fallback = securities.filter((security) => !seen.has(security.symbol)).slice(0, 5 - rankedSecurities.length);
+    return [...rankedSecurities, ...fallback].slice(0, 20);
+  })();
 
   function readCachedSecurities() {
     if (typeof window === "undefined") {
@@ -123,8 +229,17 @@ export default function Page() {
         return [] as SecuritySearchResult[];
       }
 
-      const parsed = JSON.parse(raw) as SecuritySearchResult[];
-      return Array.isArray(parsed) ? parsed : [];
+      const parsed = JSON.parse(raw) as
+        | SecuritySearchResult[]
+        | { version?: number; data?: SecuritySearchResult[] };
+
+      const nextResults = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.data) && parsed.version === SECURITIES_STORAGE_VERSION
+          ? parsed.data
+          : [];
+
+      return nextResults.length >= MIN_VALID_SECURITIES_CACHE_SIZE ? nextResults : [];
     } catch {
       return [] as SecuritySearchResult[];
     }
@@ -136,7 +251,13 @@ export default function Page() {
     }
 
     try {
-      window.localStorage.setItem(SECURITIES_STORAGE_KEY, JSON.stringify(nextSecurities));
+      window.localStorage.setItem(
+        SECURITIES_STORAGE_KEY,
+        JSON.stringify({
+          version: SECURITIES_STORAGE_VERSION,
+          data: nextSecurities
+        })
+      );
     } catch {
       // Ignore localStorage write failures.
     }
@@ -344,6 +465,14 @@ export default function Page() {
         ? displaySymbol(report.symbol)
         : "--";
   const showSearchClear = isSearchFocused && Boolean(query) && !isLoadingReport && !isSearching;
+  const tabOptions = [
+    { value: TAB.REPORT, label: text.reportTab },
+    { value: TAB.CALCULATOR, label: text.calculatorTab }
+  ] as const;
+  const localeOptions = [
+    { value: LOCALE.ZH, label: text.localeZh },
+    { value: LOCALE.EN, label: text.localeEn }
+  ] as const;
 
   return (
     <main className="px-4 py-3 sm:py-4">
@@ -351,51 +480,20 @@ export default function Page() {
         <IOSInstallBanner locale={locale} />
 
         <div className="mb-2.5 flex items-center gap-2">
-          <div className="inline-flex min-w-0 flex-1 gap-1 rounded-full border border-app-line bg-white/82 p-1 shadow-app">
-            <Button
-              className={cn(
-                "h-12 flex-1 px-4 text-sm sm:h-11",
-                tab === TAB.REPORT ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
-              )}
-              variant="ghost"
-              onClick={() => setTab(TAB.REPORT)}
-            >
-              {text.reportTab}
-            </Button>
-            <Button
-              className={cn(
-                "h-12 flex-1 px-4 text-sm sm:h-11",
-                tab === TAB.CALCULATOR ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
-              )}
-              variant="ghost"
-              onClick={() => setTab(TAB.CALCULATOR)}
-            >
-              {text.calculatorTab}
-            </Button>
-          </div>
-
-          <div className="inline-flex shrink-0 gap-1 rounded-full border border-app-line bg-white/82 p-1 shadow-app">
-            <Button
-              className={cn(
-                "h-12 min-w-12 px-3 text-sm sm:h-11",
-                locale === LOCALE.ZH ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
-              )}
-              variant="ghost"
-              onClick={() => setLocale(LOCALE.ZH)}
-            >
-              {text.localeZh}
-            </Button>
-            <Button
-              className={cn(
-                "h-12 min-w-12 px-3 text-sm sm:h-11",
-                locale === LOCALE.EN ? "bg-app-navy text-white hover:bg-[#252848]" : "text-app-muted hover:bg-app-navy/6 hover:text-app-navy"
-              )}
-              variant="ghost"
-              onClick={() => setLocale(LOCALE.EN)}
-            >
-              {text.localeEn}
-            </Button>
-          </div>
+          <SegmentedControl
+            className="min-w-0 flex-1"
+            itemClassName="flex-1"
+            onValueChange={(value) => setTab(value as TabKey)}
+            options={tabOptions}
+            value={tab}
+          />
+          <SegmentedControl
+            className="shrink-0"
+            itemClassName="min-w-12 px-3"
+            onValueChange={(value) => setLocale(value as Locale)}
+            options={localeOptions}
+            value={locale}
+          />
         </div>
 
         {tab === TAB.REPORT ? (
@@ -451,20 +549,24 @@ export default function Page() {
               </div>
 
               {open && results.length > 0 ? (
-                <div className="absolute z-20 mt-2 grid w-full gap-1 rounded-[22px] border border-app-line bg-white/96 p-2 shadow-app backdrop-blur-sm">
-                  {results.map((security) => (
-                    <Button
-                      key={security.symbol}
-                      className="h-auto justify-start rounded-2xl px-4 py-3 text-left hover:bg-app-navy/6"
-                      variant="ghost"
-                      onClick={() => chooseSecurity(security)}
-                    >
-                      <div className="grid gap-0.5">
-                        <strong className="text-sm text-app-navy">{displaySymbol(security.symbol)}</strong>
-                        <span className="text-xs text-app-muted">{security.name}</span>
-                      </div>
-                    </Button>
-                  ))}
+                <div className="absolute z-20 mt-2 w-full rounded-[22px] border border-app-line bg-white/96 p-2 shadow-app backdrop-blur-sm">
+                  <div className="h-[320px] max-h-[60vh] overflow-y-auto">
+                    <div className="grid gap-1">
+                      {results.map((security) => (
+                        <Button
+                          key={security.symbol}
+                          className="min-h-15 h-auto w-full justify-start rounded-2xl px-4 py-3 text-left hover:bg-app-navy/6"
+                          variant="ghost"
+                          onClick={() => chooseSecurity(security)}
+                        >
+                          <div className="grid gap-0.5">
+                            <strong className="text-sm text-app-navy">{displaySymbol(security.symbol)}</strong>
+                            <span className="text-xs text-app-muted">{security.name}</span>
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : null}
 
@@ -477,6 +579,7 @@ export default function Page() {
             </div>
 
             {report ? <ReportPage report={report} compact locale={locale} /> : null}
+            {!report && isLoadingReport ? <ReportSkeleton /> : null}
           </>
         ) : (
           <OptionYieldCalculator locale={locale} />
